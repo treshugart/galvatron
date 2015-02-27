@@ -7,10 +7,70 @@ var extend = require('extend');
 var glob = require('glob');
 var fs = require('fs');
 var mapStream = require('map-stream');
+var path = require('path');
 var util = require('util');
 var vinylTransform = require('vinyl-transform');
 
 var fileCache = {};
+
+function resolveModule (mod) {
+    var modFile = mod + '.js';
+    var foundFile;
+    var dirs = __dirname.split(path.sep);
+    var lookups = {
+        'bower_components': 'bower.json',
+        'node_modules': 'package.json'
+    };
+
+    check:
+    for (var a = 0; a < dirs.length; a++) {
+        for (var b in lookups) {
+            if (lookups.hasOwnProperty(b)) {
+                var checkDir = path.join(__dirname, new Array(a).join('../'), b, mod);
+                var packageFile = path.join(checkDir, lookups[b]);
+                var found = false;
+                var defaultFiles = [
+                    'index.js',
+                    modFile,
+                    path.join('src', 'index.js'),
+                    path.join('src', modFile),
+                    path.join('lib', 'index.js'),
+                    path.join('lib', modFile),
+                    path.join('dist', 'index.js'),
+                    path.join('dist', modFile)
+                ];
+
+                if (fs.existsSync(packageFile)) {
+                    var pkg = require(packageFile);
+                    var pkgMain = path.join(checkDir, pkg.main);
+
+                    if (pkg.main && fs.existsSync(pkgMain)) {
+                        foundFile = pkgMain;
+                        break check;
+                    }
+                }
+
+                found = defaultFiles.some(function (file) {
+                    file = path.join(checkDir, file);
+                    if (fs.existsSync(file)) {
+                        foundFile = file;
+                        return true;
+                    }
+                });
+
+                if (found) {
+                    break check;
+                }
+            }
+        }
+    }
+
+    if (!foundFile) {
+        throw new Error('Could not find the module ' + mod + '.');
+    }
+
+    return foundFile;
+}
 
 function regexToArray (regex, str) {
     var match;
@@ -23,32 +83,28 @@ function regexToArray (regex, str) {
     return matches;
 }
 
-function basepath (path) {
-    var parts = (path || '').split('/');
+function basepath (file) {
+    var parts = (file || '').split(path.sep);
     parts.pop();
-    return parts.join('/');
+    return parts.join(path.sep);
 }
 
-function isAbsolutePath (path) {
-    return path && (path[0] === '/' || path.match(/http(s)?\:\/\//));
-}
-
-function normalizePath (path, context) {
-    path = path || '';
+function normalizePath (file, context) {
+    file = file || '';
 
     // If an absolute path is provided, it becomes the new context.
-    if (isAbsolutePath(path)) {
-        return path;
+    if (file.indexOf(path.sep) === 0) {
+        return file;
     }
 
     // Get the number of directories we should go up before we format the url.
-    var upDirCount = (path.match(/\.\.\//g) || []).length;
+    var upDirCount = (file.match(/\.\.\//g) || []).length;
 
     // Remove all ../
-    path = path.replace(/\.\.\//g, '');
+    file = file.replace(/\.\.\//g, '');
 
     // Remove all ./
-    path = path.replace(/\.\//g, '');
+    file = file.replace(/\.\//g, '');
 
     // Split the base path and remove the "updirs" from it.
     var baseParts = basepath(context).split('/');
@@ -60,7 +116,7 @@ function normalizePath (path, context) {
         basePath += '/';
     }
 
-    return basePath + path + '.js';
+    return basePath + file + '.js';
 }
 
 function hash (str) {
@@ -99,7 +155,7 @@ function getFile (file) {
 }
 
 function getRequires (code) {
-    return regexToArray(/require\([\'"](\.[^\'"]+)[\'"]\)/g, code);
+    return regexToArray(/require\([\'"]([^\'"]+)[\'"]\)/g, code);
 }
 
 function Galvatron (opts) {
@@ -127,6 +183,20 @@ extend(Galvatron.prototype, {
         return code.join(this.options.joiner);
     },
 
+    map: function (map, path) {
+        if (typeof map === 'object') {
+            for (var a in map) {
+                if (map.hasOwnProperty(a)) {
+                    this.resolveModuleCache[a] = map[a];
+                }
+            }
+        } else {
+            this.resolveModuleCache[map] = path;
+        }
+
+        return this;
+    },
+
     one: function (file) {
         return this.postTransform(file, this.preTransform(file, getFile(file)));
     },
@@ -137,12 +207,14 @@ extend(Galvatron.prototype, {
     },
 
     preTransform: function (file, code) {
+        var that = this;
+
         if (this.filePreTransformCache[file]) {
             return this.filePreTransformCache[file];
         }
 
         this.preTransformers.forEach(function (transformer) {
-            code = transformer(file, code);
+            code = transformer(that, file, code);
         });
 
         this.emit('pre-transform', file, code);
@@ -155,12 +227,14 @@ extend(Galvatron.prototype, {
     },
 
     postTransform: function (file, code) {
+        var that = this;
+
         if (this.postTransformers[file]) {
             return this.postTransformers[file];
         }
 
         this.postTransformers.forEach(function (transformer) {
-            code = transformer(file, code);
+            code = transformer(that, file, code);
         });
 
         this.emit('post-transform', file, code);
@@ -174,7 +248,16 @@ extend(Galvatron.prototype, {
         this.fileTraceCache = [];
         this.preTransformers = [];
         this.postTransformers = [];
+        this.resolveModuleCache = {};
         return this;
+    },
+
+    resolve: function (file, relativeTo) {
+        if (file.indexOf(path.sep) === -1) {
+            return this.resolveModuleCache[file] || (this.resolveModuleCache[file] = resolveModule(file));
+        }
+
+        return normalizePath(file, relativeTo);
     },
 
     stream: function () {
@@ -212,7 +295,7 @@ extend(Galvatron.prototype, {
         this.emit('trace', file, code);
 
         getRequires(code).forEach(function (match) {
-            var dependency = normalizePath(match[1], file);
+            var dependency = that.resolve(match[1], file);
             if (files.indexOf(dependency) === -1 && that.traceable(dependency)) {
                 that.traceRecursive(dependency, files);
             }
@@ -242,7 +325,7 @@ extend(Galvatron.prototype, {
 });
 
 Galvatron.transform = {
-    babel: function (file, data) {
+    babel: function (galv, file, data) {
         return babel.transform(data, {
             // We have no idea what any dependencies might be up to. This
             // ensures backward compatibility even though ES6 is strict.
@@ -251,11 +334,11 @@ Galvatron.transform = {
         }).code;
     },
 
-    globalize: function (file, data) {
+    globalize: function (galv, file, data) {
         var windowName = 'window.' + generateModuleName(file);
 
         getRequires(data).forEach(function (match) {
-            data = data.replace(match[0], 'window.' + generateModuleName(normalizePath(match[1], file)));
+            data = data.replace(match[0], 'window.' + generateModuleName(galv.resolve(match[1], file)));
         });
 
         data = 'var module = { exports: {} };\nvar exports = module.exports;\n\n' + data;
@@ -266,7 +349,7 @@ Galvatron.transform = {
         return data;
     },
 
-    unamd: function (file, data) {
+    unamd: function (galv, file, data) {
         return data.replace(/define\(/, '(function(){})(');
     }
 };
