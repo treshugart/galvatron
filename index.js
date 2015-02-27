@@ -199,22 +199,31 @@ extend(Galvatron.prototype, {
         return traced;
     },
 
+    traceable: function (file) {
+        return !this.options.ignoreDupes || this.fileTraceCache.indexOf(file) === -1;
+    },
+
     traceRecursive: function (file, files) {
         var that = this;
         var code = getFile(file);
         files = files || [];
-
         code = this.preTransform(file, code);
+
         this.emit('trace', file, code);
+
         getRequires(code).forEach(function (match) {
             var dependency = normalizePath(match[1], file);
-
-            if (files.indexOf(dependency) === -1 && (!that.options.ignoreDupes || that.fileTraceCache.indexOf(dependency) === -1)) {
+            if (files.indexOf(dependency) === -1 && that.traceable(dependency)) {
                 that.traceRecursive(dependency, files);
-                files.push(dependency);
-                that.fileTraceCache.push(dependency);
             }
         });
+
+        if (this.traceable(file)) {
+            this.fileTraceCache.push(file);
+            if (files.indexOf(file) === -1) {
+                files.push(file);
+            }
+        }
 
         return files;
     },
