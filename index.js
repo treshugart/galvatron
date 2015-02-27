@@ -290,6 +290,7 @@ extend(Galvatron.prototype, {
         var that = this;
         var code = getFile(file);
         files = files || [];
+        file = this.resolve(file);
         code = this.preTransform(file, code);
 
         this.emit('trace', file, code);
