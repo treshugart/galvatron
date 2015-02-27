@@ -106,6 +106,7 @@ function Galvatron (opts) {
     opts = opts || {};
     opts = {
         ignoreDupes: opts.ignoreDupes || true,
+        joiner: '\n\n'
     };
 
     EventEmitter.call(this);
@@ -115,15 +116,15 @@ function Galvatron (opts) {
 
 util.inherits(Galvatron, EventEmitter);
 extend(Galvatron.prototype, {
-    all: function (path, joiner) {
+    all: function (path) {
         var code = [];
         var that = this;
 
         this.trace(path).forEach(function (file) {
-            code.push(that.postTransform(file, code));
+            code.push(that.postTransform(file, that.filePreTransformCache[file]));
         });
 
-        return code.join(joiner || '\n\n');
+        return code.join(this.options.joiner);
     },
 
     one: function (file) {
@@ -136,11 +137,15 @@ extend(Galvatron.prototype, {
     },
 
     preTransform: function (file, code) {
-        this.emit('pre-tansform', file, code);
+        if (this.filePreTransformCache[file]) {
+            return this.filePreTransformCache[file];
+        }
+
         this.preTransformers.forEach(function (transformer) {
             code = transformer(file, code);
         });
 
+        this.emit('pre-transform', file, code);
         return this.filePreTransformCache[file] = code;
     },
 
@@ -150,19 +155,23 @@ extend(Galvatron.prototype, {
     },
 
     postTransform: function (file, code) {
-        this.emit('post-tansform', file, code);
+        if (this.postTransformers[file]) {
+            return this.postTransformers[file];
+        }
+
         this.postTransformers.forEach(function (transformer) {
             code = transformer(file, code);
         });
 
+        this.emit('post-transform', file, code);
         return this.filePostTransformCache[file] = code;
     },
 
     reset: function () {
         this.emit('reset');
         this.filePreTransformCache = {};
-        this.filePostTransformMap = {};
-        this.fileTraceCache = {};
+        this.filePostTransformCache = {};
+        this.fileTraceCache = [];
         this.preTransformers = [];
         this.postTransformers = [];
         return this;
@@ -177,43 +186,37 @@ extend(Galvatron.prototype, {
         });
     },
 
-    trace: function (paths, depth) {
+    trace: function (paths) {
         var that = this;
         var traced = [];
-        var tracedNames = [];
 
         eachFileInPaths(paths, function (file) {
-            that.traceRecursive(file, [], depth).forEach(function (dep) {
-                if (tracedNames.indexOf(dep.path) === -1) {
-                    traced.push(dep);
-                    tracedNames.push(dep.path);
-                }
+            that.traceRecursive(file).forEach(function (dep) {
+                traced.push(dep);
             });
         });
 
         return traced;
     },
 
-    traceRecursive: function (file, files, depth, currentDepth) {
+    traceRecursive: function (file, files) {
         var that = this;
         var code = getFile(file);
-
-        currentDepth = currentDepth || 1;
         files = files || [];
 
-        if (file in this.fileTraceCache) {
-            return this.fileTraceCache[file];
-        }
-
         code = this.preTransform(file, code);
-        this.emit('trace', file, currentDepth);
+        this.emit('trace', file, code);
         getRequires(code).forEach(function (match) {
-            if (typeof depth === 'undefined' || depth >= currentDepth) {
-                files.concat(that.traceRecursive(normalizePath(match[1], file), files, depth, depth + 1));
+            var dependency = normalizePath(match[1], file);
+
+            if (files.indexOf(dependency) === -1 && (!that.options.ignoreDupes || that.fileTraceCache.indexOf(dependency) === -1)) {
+                that.traceRecursive(dependency, files);
+                files.push(dependency);
+                that.fileTraceCache.push(dependency);
             }
         });
 
-        return this.fileTraceCache[file] = files;
+        return files;
     },
 
     transformer: function (transformer) {
