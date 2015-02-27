@@ -48,6 +48,12 @@ Module names are resolved in several different ways.
 
 It will go up the directory tree - starting with the directory which the `require()` call originated in - and look for a `bower_components` folder and a `node_modules` folder, in that order. It first looks to see if there is a `bower.json` or a `package.json` depending on the package manager and if it contains a `main` definition, it will use that. If it doesn't find a main, it will look for an `index.js` or a file with the same name as the module but with a `js` extension in `src`, `lib` and `dist` (in that order).
 
+You can also use module names instead of paths when specifying files to Galvatron:
+
+```js
+galvatron.all('underscore');
+```
+
 ### Transforms
 
 Galvatron has a notion of both `pre` and `post` transorms. The `pre` transforms happen prior to tracing dependencies. This way, if you're writing your stuff in ES6 you can set a `pre` transformer to transpile your code from ES6 to ES5 CommonJS so that Galvatron can properly inspect your files.
