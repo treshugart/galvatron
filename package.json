@@ -1,6 +1,6 @@
 {
   "name": "galvatron",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "Library that applies pre and post transforms to CommonJS files, traces their dependencies and concatenates them.",
   "main": "index.js",
   "scripts": {
@@ -28,8 +28,8 @@
     "url": "https://github.com/treshugart/galvatron/issues"
   },
   "homepage": "https://github.com/treshugart/galvatron",
-  "devDependencies": {
-    "babel": "^4.5.5",
+  "devDependencies": {},
+  "dependencies": {
     "crypto": "0.0.3",
     "extend": "^2.0.0",
     "glob": "^4.4.1",
