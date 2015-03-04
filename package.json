@@ -4,7 +4,7 @@
   "description": "Library that applies pre and post transforms to CommonJS files, traces their dependencies and concatenates them.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "./node_modules/.bin/mocha --reporter list"
   },
   "repository": {
     "type": "git",
@@ -28,12 +28,19 @@
     "url": "https://github.com/treshugart/galvatron/issues"
   },
   "homepage": "https://github.com/treshugart/galvatron",
-  "devDependencies": {},
+  "devDependencies": {
+    "chai": "^2.1.0",
+    "mocha": "^2.1.0",
+    "tmp": "0.0.25"
+  },
   "dependencies": {
     "crypto": "0.0.3",
     "extend": "^2.0.0",
     "glob": "^4.4.1",
+    "gulp-watch": "^4.1.1",
     "map-stream": "0.0.5",
+    "minimatch": "^2.0.1",
+    "vinyl": "^0.4.6",
     "vinyl-transform": "^1.0.0"
   }
 }
