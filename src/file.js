@@ -1,6 +1,6 @@
 'use strict';
 
-var fs = require('fs');
+var nodeFs = require('fs');
 
 function regexToArray (regex, str) {
   var match;
@@ -13,24 +13,31 @@ function regexToArray (regex, str) {
   return matches;
 }
 
-function getRequires (code) {
+function getImports (code) {
   return regexToArray(/require\([\'"]([^\'"]+)[\'"]\)/g, code);
 }
 
-function File (galv, file) {
-  this._galv = galv;
+function File (fs, transformer, file) {
+  this._fs = fs;
+  this._transformer = transformer;
   this._file = file;
 }
 
 File.prototype = {
   get code () {
-    return this._code || (this._code = fs.readFileSync(this.path).toString());
+    return this._code || (this._code = nodeFs.readFileSync(this.path).toString());
   },
 
   get dependencies () {
     var that = this;
-    return this._dependencies || (this._dependencies = this.requires.map(function (req) {
-      return that._galv.resolve(req, that.path);
+    return this._dependencies || (this._dependencies = this.imports.map(function (req) {
+      return that._fs.path(req, that.path);
+    }));
+  },
+
+  get imports () {
+    return this._imports || (this._imports = getImports(this.pre).map(function (req) {
+      return req[1];
     }));
   },
 
@@ -39,25 +46,19 @@ File.prototype = {
   },
 
   get post () {
-    return this._post || (this._post = this._galv._transform('post', this.path, this.pre));
+    return this._post || (this._post = this._transformer.transform('post', this, this.pre));
   },
 
   get pre () {
-    return this._pre || (this._pre = this._galv._transform('pre', this.path, this.code));
-  },
-
-  get requires () {
-    return this._requires || (this._requires = getRequires(this.pre).map(function (req) {
-      return req[1];
-    }));
+    return this._pre || (this._pre = this._transformer.transform('pre', this, this.code));
   },
 
   clean: function () {
     delete this._code;
     delete this._dependencies;
+    delete this._imports;
     delete this._post;
     delete this._pre;
-    delete this._requires;
     return this;
   }
 };

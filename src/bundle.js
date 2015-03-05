@@ -1,6 +1,7 @@
 'use strict';
 
 var extend = require('extend');
+var Watcher = require('./watcher');
 var glob = require('./glob');
 var mapStream = require('map-stream');
 var minimatch = require('minimatch');
@@ -12,14 +13,13 @@ function transform (files) {
   });
 }
 
-function Bundle (galv, paths, options) {
-  this._galv = galv;
+function Bundle (tracer, paths, options) {
   this._options = extend({
     common: false,
     joiner: '\n\n'
   }, options);
   this._paths = paths;
-  this._tracer = galv.tracer();
+  this._tracer = tracer;
 }
 
 Bundle.prototype = {
@@ -31,7 +31,7 @@ Bundle.prototype = {
     return this._concatenate(this._getDependencies().uncommon);
   },
 
-  join: function (paths) {
+  generate: function (paths) {
     var that = this;
     var common = this._getDependencies().common;
     var files = this._getFiles();
@@ -65,9 +65,13 @@ Bundle.prototype = {
     var that = this;
     return vinylTransform(function (file) {
       return mapStream(function (data, next) {
-        return next(null, that.join(file));
+        return next(null, that.bundle(file));
       });
     });
+  },
+
+  watch: function () {
+    return new Watcher(this._tracer, this._paths);
   },
 
   _concatenate: function (files) {

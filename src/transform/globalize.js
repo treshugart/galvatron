@@ -1,6 +1,7 @@
 'use strict';
 
 var crypto = require('crypto');
+var resolveFile = require('../resolve/file');
 
 function hash (str) {
   var cryp = crypto.createHash('md5');
@@ -23,18 +24,19 @@ function indent (code, amount) {
   return lines.join('\n');
 }
 
-module.exports = function (galv, file, data) {
-  var fileObj = galv.file(file);
-  var windowName = 'window.' + generateModuleName(file);
+module.exports = function () {
+  return function (data, file, imports, dependencies) {
+    var windowName = 'window.' + generateModuleName(file);
 
-  fileObj.requires.forEach(function (req, index) {
-    data = data.replace('require("' + req + '")', 'window.' + generateModuleName(fileObj.dependencies[index]));
-  });
+    imports.forEach(function (imp, index) {
+      data = data.replace('require("' + imp + '")', 'window.' + generateModuleName(dependencies[index]));
+    });
 
-  data = 'var module = { exports: {} };\nvar exports = module.exports;\n\n' + data;
-  data = data + '\n\nreturn module.exports';
-  data = indent(data);
-  data = windowName + ' = (function () {\n' + data + '\n}.call(this));';
+    data = 'var module = { exports: {} };\nvar exports = module.exports;\n\n' + data;
+    data = data + '\n\nreturn module.exports';
+    data = indent(data);
+    data = windowName + ' = (function () {\n' + data + '\n}.call(this));';
 
-  return data;
+    return data;
+  };
 };

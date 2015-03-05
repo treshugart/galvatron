@@ -1,28 +1,9 @@
 {
     "globals": {
         "__dirname": false,
-
-        "AJS": true,
-        "aui": false,
-        "firebug": false,
-        "Raphael": false,
-
-        "define": true,
-        "require": true,
-        "requirejs": false,
-
-        "sinon": false,
-
-        "chai": false,
-        "expect": false,
-
-        "it": false,
-        "describe": false,
-        "beforeEach": false,
-        "afterEach": false,
         "module": false,
-
-        "process": false
+        "process": false,
+        "require": false
     },
     "boss": true,
     "browser": true,

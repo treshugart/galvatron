@@ -6,12 +6,6 @@ var Galvatron = require('../index');
 var mocha = require('mocha');
 var tmp = require('tmp');
 
-function triggerChange (file, done) {
-  fs.readFile(file, function (err, buf) {
-    fs.writeFile(file, buf.toString(), done);
-  });
-}
-
 function makeRequire (path) {
   return 'require("' + path + '");';
 }
@@ -58,10 +52,10 @@ mocha.describe('watching', function () {
   });
 
   mocha.it('should bundle dependencies for files that match the common option', function () {
-    expect(bundle.join(file1.name)).to.equal(makeFiles([file4.name, file3.name, file1.name]));
+    expect(bundle.generate(file1.name)).to.equal(makeFiles([file4.name, file3.name, file1.name]));
   });
 
   mocha.it('should not bundle dependencies for files that do not match the common option', function () {
-    expect(bundle.join(file2.name)).to.equal(makeFiles([file2.name]));
-  })
+    expect(bundle.generate(file2.name)).to.equal(makeFiles([file2.name]));
+  });
 });
