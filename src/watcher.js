@@ -7,12 +7,14 @@ var Tracer = require('./tracer');
 var streams = {};
 var watched = {};
 
-function Watcher (tracer) {
+function Watcher (events, tracer) {
+  this._events = events;
   this._tracer = tracer;
 }
 
 Watcher.prototype = {
   watch: function (glob) {
+    var that = this;
     var watcher = gulpWatch(glob, function (file) {
       var parent = file.path;
 
@@ -23,7 +25,7 @@ Watcher.prototype = {
       }
 
       watched[parent] = true;
-      this._tracer.trace(file.path).forEach(function (traced) {
+      that._tracer.trace(file.path).forEach(function (traced) {
         // Don't need to do anything if this is the main file because the main
         // watcher will do what we need it to.
         if (file.path === traced.path) {
@@ -41,6 +43,7 @@ Watcher.prototype = {
           traced.clean();
 
           // We actually have to write the main file to trigger a change.
+          that._events.emit('watch.update', traced);
           fs.readFile(parent, function (err, buf) {
             fs.writeFile(parent, buf.toString());
           });
@@ -60,4 +63,4 @@ Watcher.prototype = {
   }
 };
 
-module.exports = Tracer;
+module.exports = Watcher;

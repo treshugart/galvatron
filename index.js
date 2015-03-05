@@ -1,21 +1,22 @@
 'use strict';
 
-var extend = require('extend');
 var Bundle = require('./src/bundle');
+var EventEmitter = require('events').EventEmitter;
+var File = require('./src/file');
 var Fs = require('./src/fs');
 var Tracer = require('./src/tracer');
 var Transformer = require('./src/transformer');
+var Watcher = require('./src/watcher');
+var ubercod = require('ubercod');
 
-function Galvatron () {
-  this.transformer = new Transformer();
-  this.fs = new Fs(this.transformer);
-  this.tracer = new Tracer(this.fs);
-}
-
-Galvatron.prototype = {
-    bundle: function (paths, options) {
-      return new Bundle(this.tracer, paths, options);
-    }
+module.exports = function () {
+  return ubercod({
+    Bundle: Bundle,
+    $Events: EventEmitter,
+    File: File,
+    $Fs: Fs,
+    $Tracer: Tracer,
+    $Transformer: Transformer,
+    $Watcher: Watcher
+  });
 };
-
-module.exports = Galvatron;

@@ -16,9 +16,9 @@ Transformer.prototype = {
     return this.transformer('post', transformer, [].slice.call(arguments, 1));
   },
 
-  transform: function (type, file, data) {
+  transform: function (type, data, info) {
     this._transformers[type].forEach(function (transformer) {
-      data = transformer(data, file.path, file.imports, file.dependencies);
+      data = transformer(data, info);
     });
     return data;
   },

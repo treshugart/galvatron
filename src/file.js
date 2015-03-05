@@ -31,7 +31,7 @@ File.prototype = {
   get dependencies () {
     var that = this;
     return this._dependencies || (this._dependencies = this.imports.map(function (req) {
-      return that._fs.path(req, that.path);
+      return that._fs.resolve(req, that.path);
     }));
   },
 
@@ -46,11 +46,17 @@ File.prototype = {
   },
 
   get post () {
-    return this._post || (this._post = this._transformer.transform('post', this, this.pre));
+    return this._post || (this._post = this._transformer.transform('post', this.pre, {
+      dependencies: this.dependencies,
+      imports: this.imports,
+      path: this.path
+    }));
   },
 
   get pre () {
-    return this._pre || (this._pre = this._transformer.transform('pre', this, this.code));
+    return this._pre || (this._pre = this._transformer.transform('pre', this.code, {
+      path: this.path
+    }));
   },
 
   clean: function () {

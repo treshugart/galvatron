@@ -2,7 +2,7 @@
 
 var expect = require('chai').expect;
 var fs = require('fs');
-var Galvatron = require('../index');
+var galvatron = require('../index');
 var mocha = require('mocha');
 var tmp = require('tmp');
 
@@ -25,7 +25,7 @@ mocha.describe('watching', function () {
   var galv;
 
   mocha.beforeEach(function () {
-    galv = new Galvatron();
+    galv = galvatron();
     file1 = tmp.fileSync();
     file2 = tmp.fileSync();
     file3 = tmp.fileSync();
@@ -35,11 +35,14 @@ mocha.describe('watching', function () {
     fs.writeFileSync(file2.name, makeRequire(file3.name));
     fs.writeFileSync(file3.name, makeRequire(file4.name));
 
-    bundle = galv.bundle([
-      file1.name,
-      file2.name
-    ], {
-      common: file1.name
+    bundle = galv.bundle({
+      paths: [
+        file1.name,
+        file2.name
+      ],
+      options: {
+        common: file1.name
+      }
     });
   });
 

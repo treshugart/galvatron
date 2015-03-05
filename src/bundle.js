@@ -13,16 +13,21 @@ function transform (files) {
   });
 }
 
-function Bundle (tracer, paths, options) {
+function Bundle (tracer, watcher, paths, options) {
   this._options = extend({
     common: false,
     joiner: '\n\n'
   }, options);
   this._paths = paths;
   this._tracer = tracer;
+  this._watcher = watcher;
 }
 
 Bundle.prototype = {
+  get paths () {
+    return glob(this._paths);
+  },
+
   common: function () {
     return this._concatenate(this._getDependencies().common);
   },
@@ -34,7 +39,7 @@ Bundle.prototype = {
   generate: function (paths) {
     var that = this;
     var common = this._getDependencies().common;
-    var files = this._getFiles();
+    var files = this.paths;
     var opts = this._options;
     var traced = [];
 
@@ -65,13 +70,13 @@ Bundle.prototype = {
     var that = this;
     return vinylTransform(function (file) {
       return mapStream(function (data, next) {
-        return next(null, that.bundle(file));
+        return next(null, that.generate(file));
       });
     });
   },
 
   watch: function () {
-    return new Watcher(this._tracer, this._paths);
+    return this._watcher.watch(this.paths);
   },
 
   _concatenate: function (files) {
@@ -113,10 +118,6 @@ Bundle.prototype = {
       common: common,
       uncommon: tracedUniques
     };
-  },
-
-  _getFiles: function () {
-    return glob(this._paths);
   }
 };
 
