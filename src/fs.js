@@ -11,8 +11,12 @@ function Fs (transformer) {
 }
 
 Fs.prototype = {
-  file: function (file, relativeTo) {
-    var resolved = this.resolve(file, relativeTo);
+  cached: function (file) {
+    return this._cache[this.resolve(file)];
+  },
+
+  file: function (file) {
+    var resolved = this.resolve(file);
     return this._cache[resolved] || (this._cache[resolved] = new File(this, this._transformer, resolved));
   },
 
@@ -93,7 +97,7 @@ Fs.prototype = {
     return foundFile;
   },
 
-  resolve: function (file, relativeTo) {
+  resolve: function (file) {
     if (path.isAbsolute(file)) {
       return file;
     }
@@ -106,11 +110,11 @@ Fs.prototype = {
       file += '.js';
     }
 
-    return relativeTo ? this.relative(file, relativeTo) : file;
+    return file;
   },
 
   relative: function (file, relativeTo) {
-    return path.resolve(path.dirname(relativeTo), file);
+    return relativeTo ? path.resolve(path.dirname(relativeTo), file) : path.resolve(file);
   }
 };
 
