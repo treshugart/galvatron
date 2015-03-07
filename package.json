@@ -38,9 +38,11 @@
     "extend": "^2.0.0",
     "glob": "^4.4.1",
     "gulp-watch": "^4.1.1",
+    "install": "^0.1.8",
     "map-stream": "0.0.5",
     "minimatch": "^2.0.1",
-    "ubercod": "0.0.0",
+    "npm": "^2.7.0",
+    "ubercod": "^0.1.0",
     "vinyl": "^0.4.6",
     "vinyl-transform": "^1.0.0"
   }
