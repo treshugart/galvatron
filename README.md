@@ -22,7 +22,7 @@ The most common usage for Galvatron is to take a single file and transform it in
 var fs = require('fs');
 var galvatron = require('galvatron');
 
-fs.writeFile('dist/*.js', galvatron.all('src/index.js'));
+fs.writeFile('dist/*.js', galvatron.bundle('src/index.js').compile());
 ```
 
 ### Multiple File Transformation
@@ -30,10 +30,10 @@ fs.writeFile('dist/*.js', galvatron.all('src/index.js'));
 If you want to take multiple files and transform them into a single file you can do that too. It will still trace each file's dependencies in the proper order and will additionally make sure that none are duplicated. As you can see, a both a path or glob pattern are supported. You can also use a string or an array to specify your files.
 
 ```js
-var compiled = galvatron.all([
+var compiled = galvatron.bundle([
   'bower_components/jquery/jquery.js',
   'src/*.js'
-]);
+]).compile();
 ```
 
 ### Dependency Resolution
@@ -51,7 +51,7 @@ It will go up the directory tree - starting with the directory which the `requir
 You can also use module names instead of paths when specifying files to Galvatron:
 
 ```js
-galvatron.all('underscore');
+var underscoreAndDepenendies = galvatron.bundle('underscore').compile();
 ```
 
 ### Transforms
@@ -71,7 +71,7 @@ There are three built-in transformers:
 The `babel` transformer will transpile your code from ES6 to ES5 using [Babel](https://babeljs.io/). Simply tell Galvatron to use it:
 
 ```js
-galvatron.pre('babel');
+galvatron.tranform.pre('babel');
 ```
 
 #### Globalize
@@ -91,22 +91,16 @@ The `unamd` transform will no-op any AMD code that is traced by Galvatron. This 
 You can also write custom transformers.
 
 ```js
-galvatron.pre(function (galv, file, code) {
-  // Do something with `file` or `code` and return the result as a string.
-  //
-  // `galv` is a reference to the galvatron instance just in case you don't
-  // have access to it in your current scope.
+galvatron.transformer.pre(function (code, file) {
+  // Do something with `code` or `file` and return the result as a string.
 });
 ```
 
 That would define a `pre` transformer. To define a `post` transformer, all you've got to do is call `post`.
 
 ```js
-galvatron.post(function (galv, file, code) {
-  // Do something with `file` or `code` and return the result as a string.
-  //
-  // `galv` is a reference to the galvatron instance just in case you don't
-  // have access to it in your current scope.
+galvatron.transformer.post(function (code, file) {
+  // Do something with `code` or `file` and return the result as a string.
 });
 ```
 
@@ -115,9 +109,20 @@ galvatron.post(function (galv, file, code) {
 Streams are super useful if you want to integrate your build into a stream system such as Gulp.
 
 ```js
-gulp.src('src/*.js')
-  .pipe(galvatron.stream())
+var bundle = galvatron.bundle('src/*.js');
+gulp.src(bundle.files)
+  .pipe(bundle.stream())
   .pipe(gulp.dest('dist'));
 ```
 
 The `stream()` method returns a `vinyl` stream created by `vinylTransform`, so it can be used anywhere a `vinyl` stream can be used, not just with Gulp.
+
+You can create watch streams, too:
+
+```js
+var bundle = galvatron.bundle('src/*.js');
+gulp.src(bundle.files)
+  .pipe(bundle.watch())
+  .pipe(bundle.stream())
+  .pipe(gulp.dest('dist'));
+```
