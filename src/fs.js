@@ -97,7 +97,7 @@ Fs.prototype = {
     return foundFile;
   },
 
-  resolve: function (file) {
+  resolve: function (file, relativeTo) {
     if (path.isAbsolute(file)) {
       return file;
     }
@@ -110,7 +110,7 @@ Fs.prototype = {
       file += '.js';
     }
 
-    return file;
+    return this.relative(file, relativeTo);
   },
 
   relative: function (file, relativeTo) {
