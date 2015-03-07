@@ -13,15 +13,15 @@ function filesToPaths (files) {
   });
 }
 
-function Bundle (events, fs, tracer, watcher, paths, options) {
+function Bundle ($events, $fs, $tracer, $watcher, paths, options) {
   this._options = extend({
     common: false,
     joiner: '\n\n'
   }, options);
-  this._events = events;
-  this._fs = fs;
-  this._tracer = tracer;
-  this._watcher = watcher;
+  this._events = $events;
+  this._fs = $fs;
+  this._tracer = $tracer;
+  this._watcher = $watcher;
   this.files = glob(paths);
   this.init();
 }

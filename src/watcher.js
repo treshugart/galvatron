@@ -5,10 +5,10 @@ var gulpWatch = require('gulp-watch');
 var streams = {};
 var watched = {};
 
-function Watcher (events, fs, tracer) {
-  this._events = events;
-  this._fs = fs;
-  this._tracer = tracer;
+function Watcher ($events, $fs, $tracer) {
+  this._events = $events;
+  this._fs = $fs;
+  this._tracer = $tracer;
 }
 
 Watcher.prototype = {

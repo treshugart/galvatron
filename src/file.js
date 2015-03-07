@@ -17,9 +17,9 @@ function getImports (code) {
   return regexToArray(/require\([\'"]([^\'"]+)[\'"]\)/g, code);
 }
 
-function File (fs, transformer, file) {
-  this._fs = fs;
-  this._transformer = transformer;
+function File ($fs, $transformer, file) {
+  this._fs = $fs;
+  this._transformer = $transformer;
   this._file = file;
 }
 

@@ -4,10 +4,10 @@ var File = require('./file');
 var fs = require('fs');
 var path = require('path');
 
-function Fs (transformer) {
+function Fs ($transformer) {
   this._cache = {};
   this._map = {};
-  this._transformer = transformer;
+  this._transformer = $transformer;
 }
 
 Fs.prototype = {

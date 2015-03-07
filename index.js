@@ -11,12 +11,12 @@ var ubercod = require('ubercod');
 
 module.exports = function () {
   return ubercod({
-    Bundle: Bundle,
-    $Events: EventEmitter,
-    File: File,
-    $Fs: Fs,
-    $Tracer: Tracer,
-    $Transformer: Transformer,
-    $Watcher: Watcher
+    $Bundle: Bundle,
+    Events: EventEmitter,
+    $File: File,
+    Fs: Fs,
+    Tracer: Tracer,
+    Transformer: Transformer,
+    Watcher: Watcher
   });
 };

@@ -2,9 +2,9 @@
 
 var glob = require('./glob');
 
-function Tracer (events, fs) {
-  this._events = events;
-  this._fs = fs;
+function Tracer ($events, $fs) {
+  this._events = $events;
+  this._fs = $fs;
 }
 
 Tracer.prototype = {
