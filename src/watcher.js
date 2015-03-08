@@ -43,12 +43,13 @@ Watcher.prototype = {
             // If a bundle file was updated, then we don't need to force update
             // it. We just notify that it's been updated.
             if (watched[bundleFile]) {
-              that._notify(bundleFile, mainFile, callback);
+              that._events.emit('update.main', bundleFile);
             } else {
               // Force update the main file
               fs.readFile(mainFile, function (err, buf) {
                 fs.writeFile(mainFile, buf.toString(), function () {
-                  that._notify(bundleFile, mainFile, callback);
+                  that._events.emit('update', bundleFile, mainFile);
+                  callback && callback(bundleFile, mainFile);
                 });
               });
             }
@@ -66,11 +67,6 @@ Watcher.prototype = {
     });
 
     return watcher;
-  },
-
-  _notify: function (bundleFile, mainFile, callback) {
-    this._events.emit('update', bundleFile, mainFile);
-    callback && callback(bundleFile, mainFile);
   }
 };
 
