@@ -5,6 +5,7 @@ var fs = require('fs');
 var glob = require('./glob');
 var mapStream = require('map-stream');
 var minimatch = require('minimatch');
+var through = require('through');
 var vinylTransform = require('vinyl-transform');
 
 function filesToPaths (files) {
@@ -129,8 +130,12 @@ Bundle.prototype = {
     });
   },
 
-  watch: function () {
-    return this._watcher.watch(this);
+  watch: function (callback) {
+    return this._watcher.watch(this, callback);
+  },
+
+  watchIf: function (condition, callback) {
+    return condition ? this.watch(callback) : through();
   },
 
   _commonDestination: function () {

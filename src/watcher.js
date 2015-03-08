@@ -2,6 +2,7 @@
 
 var fs = require('fs');
 var gulpWatch = require('gulp-watch');
+
 var streams = {};
 var watched = {};
 
@@ -12,7 +13,7 @@ function Watcher ($events, $fs, $tracer) {
 }
 
 Watcher.prototype = {
-  watch: function (bundle) {
+  watch: function (bundle, callback) {
     var that = this;
     var watcher = gulpWatch(bundle.files, function (file) {
       that._fs.file(file.path).clean();
@@ -42,12 +43,12 @@ Watcher.prototype = {
             // If a bundle file was updated, then we don't need to force update
             // it. We just notify that it's been updated.
             if (watched[bundleFile]) {
-              that._events.emit('update', bundleFile, mainFile);
+              that._notify(bundleFile, mainFile, callback);
             } else {
               // Force update the main file
               fs.readFile(mainFile, function (err, buf) {
                 fs.writeFile(mainFile, buf.toString(), function () {
-                  that._events.emit('update', bundleFile, mainFile);
+                  that._notify(bundleFile, mainFile, callback);
                 });
               });
             }
@@ -65,6 +66,11 @@ Watcher.prototype = {
     });
 
     return watcher;
+  },
+
+  _notify: function (bundleFile, mainFile, callback) {
+    this._events.emit('update', bundleFile, mainFile);
+    callback && callback(bundleFile, mainFile);
   }
 };
 
