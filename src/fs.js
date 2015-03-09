@@ -4,9 +4,10 @@ var File = require('./file');
 var fs = require('fs');
 var path = require('path');
 
-function Fs ($transformer) {
+function Fs ($matcher, $transformer) {
   this._cache = {};
   this._map = {};
+  this._matcher = $matcher;
   this._transformer = $transformer;
 }
 
@@ -17,7 +18,7 @@ Fs.prototype = {
 
   file: function (file) {
     var resolved = this.resolve(file);
-    return this._cache[resolved] || (this._cache[resolved] = new File(this, this._transformer, resolved));
+    return this._cache[resolved] || (this._cache[resolved] = new File(this, this._matcher, this._transformer, resolved));
   },
 
   map: function (map, path) {
@@ -34,7 +35,7 @@ Fs.prototype = {
     return this;
   },
 
-  module: function (mod) {
+  module: function (mod, relativeTo) {
     if (this._map[mod]) {
       return this._map[mod];
     }
@@ -46,12 +47,13 @@ Fs.prototype = {
       'bower_components': 'bower.json',
       'node_modules': 'package.json'
     };
+    relativeTo = relativeTo ? path.dirname(relativeTo) : process.cwd();
 
     check:
     for (var a = 0; a < dirs.length; a++) {
       for (var b in lookups) {
         if (lookups.hasOwnProperty(b)) {
-          var checkDir = path.join(__dirname, new Array(a).join('../'), b, mod);
+          var checkDir = path.join(relativeTo, new Array(a).join('../'), b, mod);
           var packageFile = path.join(checkDir, lookups[b]);
           var found = false;
           var defaultFiles = [
@@ -103,7 +105,7 @@ Fs.prototype = {
     }
 
     if (file.indexOf(path.sep) === -1) {
-      return path.resolve(this.module(file));
+      return path.resolve(this.module(file, relativeTo));
     }
 
     if (['.js', '.json'].indexOf(path.extname(file))) {

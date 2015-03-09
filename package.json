@@ -1,6 +1,7 @@
 {
   "name": "galvatron",
-  "version": "0.2.1",
+  "engines" : { "node" : ">=0.12" },
+  "version": "0.3.0",
   "description": "Library that applies pre and post transforms to CommonJS files, traces their dependencies and concatenates them.",
   "main": "index.js",
   "scripts": {

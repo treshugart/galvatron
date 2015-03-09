@@ -100,7 +100,7 @@ Bundle.prototype = {
         return;
       }
 
-      that._events.emit('bundle.generate', file);
+      that._events.emit('bundle', file);
 
       // Prepend the common dependencies if our option matches the file.
       if (typeof opts.common === 'string' && minimatch(file, opts.common)) {

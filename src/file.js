@@ -2,23 +2,9 @@
 
 var nodeFs = require('fs');
 
-function regexToArray (regex, str) {
-  var match;
-  var matches = [];
-
-  while (match = regex.exec(str)) {
-    matches.push(match);
-  }
-
-  return matches;
-}
-
-function getImports (code) {
-  return regexToArray(/require\([\'"]([^\'"]+)[\'"]\)/g, code);
-}
-
-function File ($fs, $transformer, file) {
+function File ($fs, $matcher, $transformer, file) {
   this._fs = $fs;
+  this._matcher = $matcher;
   this._transformer = $transformer;
   this._file = file;
 }
@@ -36,9 +22,7 @@ File.prototype = {
   },
 
   get imports () {
-    return this._imports || (this._imports = getImports(this.pre).map(function (req) {
-      return req[1];
-    }));
+    return this._imports || (this._imports = this._matcher(this.pre));
   },
 
   get path () {
