@@ -87,12 +87,16 @@ Bundle.prototype = {
     return mainDestinations;
   },
 
-  generate: function (paths) {
+  compile: function (paths) {
     var that = this;
     var common = this.common;
     var files = this.files;
     var opts = this._options;
     var traced = [];
+
+    // If paths are specified, we match those against bundle files. If not, then
+    // we default it to the bundle files and generate the entire bundle.
+    paths = paths || files;
 
     glob(paths).forEach(function (file) {
       // Only allow files that are defined in the bundle.
@@ -125,7 +129,7 @@ Bundle.prototype = {
     var that = this;
     return vinylTransform(function (file) {
       return mapStream(function (data, next) {
-        return next(null, that.generate(file));
+        return next(null, that.compile(file));
       });
     });
   },
