@@ -27,7 +27,7 @@ fs.writeFile('dist/*.js', galvatron.bundle('src/index.js').compile());
 
 ### Multiple File Transformation
 
-If you want to take multiple files and transform them into a single file you can do that too. It will still trace each file's dependencies in the proper order and will additionally make sure that none are duplicated. As you can see, a both a path or glob pattern are supported. You can also use a string or an array to specify your files.
+If you want to take multiple files and transform them into a single file you can do that too. It will still trace each file's dependencies in the proper order and will additionally make sure that none are duplicated. Both a path, glob pattern or an array of a mixture of either are supported.
 
 ```js
 var compiled = galvatron.bundle([
@@ -46,7 +46,7 @@ Dependencies are resolved in a couple different ways depending on the path that 
 
 Module names are resolved in several different ways.
 
-It will go up the directory tree - starting with the directory which the `require()` call originated in - and look for a `bower_components` folder and a `node_modules` folder, in that order. It first looks to see if there is a `bower.json` or a `package.json` depending on the package manager and if it contains a `main` definition, it will use that. If it doesn't find a main, it will look for an `index.js` or a file with the same name as the module but with a `js` extension in `src`, `lib` and `dist` (in that order).
+It will go up the directory tree - starting with the directory which the `require()` call originated in - and look for a `bower_components` folder and a `node_modules` folder, in that order. It first looks to see if there is a `bower.json` or a `package.json` depending on the package manager and if it contains a `main` definition, it will use that. If it doesn't find a main, it will look for an `index.js` or a file with the same name as the module but with a `js` extension in the component root, `src`, `lib` or `dist` directories (in that order).
 
 You can also use module names instead of paths when specifying files to Galvatron:
 
@@ -56,9 +56,15 @@ var underscoreAndDepenendies = galvatron.bundle('underscore').compile();
 
 ### Transforms
 
-Galvatron has a notion of both `pre` and `post` transorms. The `pre` transforms happen prior to tracing dependencies. This way, if you're writing your stuff in ES6 you can set a `pre` transformer to transpile your code from ES6 to ES5 CommonJS so that Galvatron can properly inspect your files.
+Galvatron has a notion of both `pre` and `post` transorms. The `pre` transforms happen prior to tracing dependencies. This means that if you need to transform your code prior to tracing it for its dependencies, then you can do so. For example, if you write your code in CoffeeScript, then you can transpile it before it hits the tracer. For example a coffeescript to ES6 build might look like:
 
-`Post` transformers happen after tracing and are intended to transform your CommonJS source before it is concatenated.
+```js
+galvatron.transform
+  .pre(coffee())
+  .post('babel');
+```
+
+`Post` transformers happen after tracing and are intended to transform your source before it is concatenated.
 
 There are three built-in transformers:
 
@@ -66,12 +72,25 @@ There are three built-in transformers:
 2. `globalize`
 3. `unamd`
 
+Built-in transformers can be specified by their name:
+
+```js
+galvatron.transform.post('babel', options);
+```
+
+Or be used directly:
+
+```js
+var babel = require('galvatron/transform/babel');
+galvatron.transform.post(babel(options));
+```
+
 #### Babel
 
 The `babel` transformer will transpile your code from ES6 to ES5 using [Babel](https://babeljs.io/). Simply tell Galvatron to use it:
 
 ```js
-galvatron.tranform.pre('babel');
+galvatron.tranform.post('babel');
 ```
 
 #### Globalize
@@ -88,21 +107,27 @@ The `unamd` transform will no-op any AMD code that is traced by Galvatron. This 
 
 #### Custom Transformers
 
-You can also write custom transformers.
+You can also write custom transformers. A transformer is simply a function that takes two arguments.
 
 ```js
-galvatron.transformer.pre(function (code, file) {
-  // Do something with `code` or `file` and return the result as a string.
+galvatron.transformer.pre(function (code, data) {
+  return doSomeTransformationsTo(code);
 });
 ```
 
-That would define a `pre` transformer. To define a `post` transformer, all you've got to do is call `post`.
+The `code` argument is a string representing the current form of the code. It may have been altered by a previous transformer, or if this is the first transformation step, it may be the exact contents of the file.
 
-```js
-galvatron.transformer.post(function (code, file) {
-  // Do something with `code` or `file` and return the result as a string.
-});
-```
+The `data` argument is an object containing information about the file. Depending on the type of transformer, this will contain different information.
+
+As a `pre` transformer:
+
+- `path` The file path.
+
+As a `post` transformer:
+
+- `path` The file path.
+- `imports` Dependency paths as they are defined in the import statement (`import`, `require()`, etc.).
+- `dependencies` Absolute dependency paths resolved from their respective import path.
 
 ### Streams
 
