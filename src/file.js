@@ -22,7 +22,7 @@ File.prototype = {
   },
 
   get imports () {
-    return this._imports || (this._imports = this._matcher(this.pre));
+    return this._imports || (this._imports = this._matcher.match(this.pre));
   },
 
   get path () {
