@@ -56,15 +56,7 @@ var underscoreAndDepenendies = galvatron.bundle('underscore').compile();
 
 ### Transforms
 
-Galvatron has a notion of both `pre` and `post` transorms. The `pre` transforms happen prior to tracing dependencies. This means that if you need to transform your code prior to tracing it for its dependencies, then you can do so. For example, if you write your code in CoffeeScript, then you can transpile it before it hits the tracer. For example a coffeescript to ES6 build might look like:
-
-```js
-galvatron.transform
-  .pre(coffee())
-  .post('babel');
-```
-
-`Post` transformers happen after tracing and are intended to transform your source before it is concatenated.
+Galvatron has a notion of both `pre` and `post` transorms. The `pre` transforms happen prior to tracing dependencies. This means that if you need to transform your code prior to tracing it for its dependencies, then you can do so. The `post` transforms happen after tracing and are intended to transform your source before it is concatenated.
 
 There are three built-in transformers:
 
