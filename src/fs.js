@@ -108,7 +108,7 @@ Fs.prototype = {
       return path.resolve(this.module(file, relativeTo));
     }
 
-    if (['.js', '.json'].indexOf(path.extname(file))) {
+    if (['.js', '.json'].indexOf(path.extname(file)) === -1) {
       file += '.js';
     }
 
