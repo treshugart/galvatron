@@ -1,6 +1,8 @@
 'use strict';
 
 var crypto = require('crypto');
+var extend = require('extend');
+var path = require('path');
 
 function hash (str) {
   var cryp = crypto.createHash('md5');
@@ -8,8 +10,8 @@ function hash (str) {
   return cryp.digest('hex');
 }
 
-function generateModuleName (str) {
-  return 'aui_module_' + hash(str);
+function generateModuleName (prefix, str) {
+  return prefix + hash(str);
 }
 
 function indent (code, amount) {
@@ -23,18 +25,27 @@ function indent (code, amount) {
   return lines.join('\n');
 }
 
-module.exports = function () {
+function relative (file) {
+  return path.relative(process.cwd(), file);
+}
+
+module.exports = function (config) {
+  config = extend({
+    prefix: '__module_'
+  }, config);
+
   return function (data, info) {
-    var windowName = 'window.' + generateModuleName(info.path);
+    var windowName = 'window.' + generateModuleName(config.prefix, info.path);
 
     info.imports.forEach(function (imp, index) {
-      data = data.replace('require("' + imp + '")', 'window.' + generateModuleName(info.dependencies[index]));
+      data = data.replace('require("' + imp + '")', 'window.' + generateModuleName(config.prefix, info.dependencies[index]));
     });
 
     data = 'var module = { exports: {} };\nvar exports = module.exports;\n\n' + data;
     data = data + '\n\nreturn module.exports';
     data = indent(data);
     data = windowName + ' = (function () {\n' + data + '\n}.call(this));';
+    data = '// ' + relative(info.path) + '\n' + data;
 
     return data;
   };
