@@ -17,10 +17,9 @@ Transformer.prototype = {
   },
 
   transform: function (type, data, info) {
-    this._transformers[type].forEach(function (transformer) {
-      data = transformer(data, info);
-    });
-    return data;
+    return this._transformers[type].reduce(function (value, transformer) {
+      return transformer(value, info);
+    }, data);
   },
 
   transformer: function (type, transformer, args) {
