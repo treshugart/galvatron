@@ -125,11 +125,25 @@ Bundle.prototype = {
     }).join(this._options.joiner);
   },
 
+  compileOne: function (file) {
+    file = this._fs.file(file);
+    return this.all.indexOf(file.path) === -1 ? '' : file.post;
+  },
+
   stream: function () {
     var that = this;
     return vinylTransform(function (file) {
       return mapStream(function (data, next) {
         return next(null, that.compile(file));
+      });
+    });
+  },
+
+  streamOne: function () {
+    var that = this;
+    return vinylTransform(function (file) {
+      return mapStream(function (data, next) {
+        return next(null, that.compileOne(file));
       });
     });
   },
