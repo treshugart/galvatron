@@ -1,6 +1,8 @@
 {
   "name": "galvatron",
-  "engines" : { "node" : ">=0.12" },
+  "engines": {
+    "node": ">=0.12"
+  },
   "version": "0.4.0",
   "description": "Library that applies pre and post transforms to CommonJS files, traces their dependencies and concatenates them.",
   "main": "index.js",
@@ -31,6 +33,7 @@
   "homepage": "https://github.com/treshugart/galvatron",
   "devDependencies": {
     "chai": "^2.1.0",
+    "galvatron": "^0.4.0",
     "mocha": "^2.1.0",
     "tmp": "0.0.25"
   },
