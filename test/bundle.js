@@ -35,30 +35,22 @@ mocha.describe('watching', function () {
     fs.writeFileSync(file2.name, makeRequire(file3.name));
     fs.writeFileSync(file3.name, makeRequire(file4.name));
 
-    bundle = galv.bundle({
-      paths: [
-        file1.name,
-        file2.name
-      ],
-      options: {
-        common: file1.name
-      }
-    });
+    bundle = galv.bundle([file1.name, file2.name], {common: file1.name});
   });
 
   mocha.it('should return common dependencies', function () {
-    expect(bundle.common()).to.equal(makeFiles([file4.name, file3.name]));
+    expect(bundle.common).to.deep.equal([file4.name, file3.name]);
   });
 
   mocha.it('should return uncommon dependencies', function () {
-    expect(bundle.uncommon()).to.equal(makeFiles([file1.name, file2.name]));
+    expect(bundle.uncommon).to.deep.equal([file1.name, file2.name]);
   });
 
   mocha.it('should bundle dependencies for files that match the common option', function () {
-    expect(bundle.generate(file1.name)).to.equal(makeFiles([file4.name, file3.name, file1.name]));
+    expect(bundle.compile(file1.name)).to.equal(makeFiles([file4.name, file3.name, file1.name]));
   });
 
   mocha.it('should not bundle dependencies for files that do not match the common option', function () {
-    expect(bundle.generate(file2.name)).to.equal(makeFiles([file2.name]));
+    expect(bundle.compile(file2.name)).to.equal(makeFiles([file2.name]));
   });
 });
