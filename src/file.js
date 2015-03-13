@@ -1,9 +1,15 @@
 'use strict';
 
 var nodeFs = require('fs');
+var cache = {};
 
-function File ($fs, $matcher, $transformer, file) {
-  this._fs = $fs;
+function File ($matcher, $transformer, file) {
+  if (cache[file]) {
+    return cache[file];
+  }
+
+  cache[file] = this;
+
   this._matcher = $matcher;
   this._transformer = $transformer;
   this._file = file;
@@ -14,15 +20,8 @@ File.prototype = {
     return this._code || (this._code = nodeFs.readFileSync(this.path).toString());
   },
 
-  get dependencies () {
-    var that = this;
-    return this._dependencies || (this._dependencies = this.imports.map(function (req) {
-      return that._fs.resolve(req, that.path);
-    }));
-  },
-
   get imports () {
-    return this._imports || (this._imports = this._matcher.match(this.pre));
+    return this._imports || (this._imports = this._matcher(this.path, this.pre));
   },
 
   get path () {
@@ -31,7 +30,6 @@ File.prototype = {
 
   get post () {
     return this._post || (this._post = this._transformer.transform('post', this.pre, {
-      dependencies: this.dependencies,
       imports: this.imports,
       path: this.path
     }));
@@ -43,7 +41,12 @@ File.prototype = {
     }));
   },
 
-  clean: function () {
+  cached: function () {
+    return cache[this.path];
+  },
+
+  expire: function () {
+    delete cache[this.path];
     delete this._code;
     delete this._dependencies;
     delete this._imports;

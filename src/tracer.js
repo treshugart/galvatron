@@ -2,8 +2,9 @@
 
 var glob = require('./glob');
 
-function Tracer ($events, $fs) {
+function Tracer ($events, $file, $fs) {
   this._events = $events;
+  this._file = $file;
   this._fs = $fs;
 }
 
@@ -21,22 +22,23 @@ Tracer.prototype = {
     return traced;
   },
 
-  _traceRecursive: function (file, parent, files, depth) {
+  _traceRecursive: function (file, parent, files, traced, depth) {
     var that = this;
-    var cached;
 
     parent = parent || null;
     files = files || [];
+    traced = traced || [];
     depth = depth || 0;
-    file = this._fs.relative(file, parent);
-    cached = this._fs.cached(file);
-    file = cached || this._fs.file(file);
+    file = this._file(this._fs.resolve(file, parent));
 
     this._events.emit('trace', file.path, depth);
-    cached || this._events.emit('trace.new', file.path, depth);
-
-    file.dependencies.forEach(function (dependency) {
-      that._traceRecursive(dependency, file.path, files, depth + 1);
+    file.imports.forEach(function (imp) {
+      // If there are circular references, this will cause recursion. We ignore
+      // recursion since all we care about is a list of dependencies.
+      if (traced.indexOf(imp.path) === -1) {
+        traced.push(imp.path);
+        that._traceRecursive(imp.path, file.path, files, traced, depth + 1);
+      }
     });
 
     if (files.indexOf(file) === -1) {

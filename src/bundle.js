@@ -14,13 +14,13 @@ function filesToPaths (files) {
   });
 }
 
-function Bundle ($events, $fs, $tracer, $watcher, paths, options) {
+function Bundle ($events, $file, $tracer, $watcher, paths, options) {
   this._options = extend({
     common: false,
     joiner: '\n\n'
   }, options);
   this._events = $events;
-  this._fs = $fs;
+  this._file = $file;
   this._tracer = $tracer;
   this._watcher = $watcher;
   this.files = glob(paths);
@@ -121,12 +121,12 @@ Bundle.prototype = {
     });
 
     return traced.map(function (file) {
-      return that._fs.file(file).post;
+      return that._file(file).post;
     }).join(this._options.joiner);
   },
 
   compileOne: function (file) {
-    file = this._fs.file(file);
+    file = this._file(file);
     return this.all.indexOf(file.path) === -1 ? '' : file.post;
   },
 

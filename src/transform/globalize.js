@@ -43,7 +43,7 @@ module.exports = function () {
     }
 
     info.imports.forEach(function (imp, index) {
-      data = data.replace('require("' + imp + '")', generateModuleName(info.dependencies[index]));
+      data = data.replace('require("' + imp.value + '")', generateModuleName(imp.path));
     });
 
     data = data.replace(regexUseStrict, '');

@@ -1,24 +1,16 @@
 'use strict';
 
-var File = require('./file');
 var fs = require('fs');
 var path = require('path');
 
-function Fs ($matcher, $transformer) {
-  this._cache = {};
+function Fs () {
   this._map = {};
-  this._matcher = $matcher;
-  this._transformer = $transformer;
 }
 
 Fs.prototype = {
-  cached: function (file) {
-    return this._cache[this.resolve(file)];
-  },
-
-  file: function (file) {
-    var resolved = this.resolve(file);
-    return this._cache[resolved] || (this._cache[resolved] = new File(this, this._matcher, this._transformer, resolved));
+  ext: function (file, ext, exts) {
+    exts = exts || [ext];
+    return exts.indexOf((path.extname(file) || '.').split('.')[1]) === -1 ? file + '.' + ext : file;
   },
 
   map: function (map, path) {
@@ -36,11 +28,10 @@ Fs.prototype = {
   },
 
   module: function (mod, relativeTo) {
-    if (this._map[mod]) {
-      return this._map[mod];
+    if (mod.indexOf(path.sep) !== -1) {
+      return;
     }
 
-    var modFile = mod + '.js';
     var foundFile;
     var dirs = __dirname.split(path.sep);
     var lookups = {
@@ -55,17 +46,6 @@ Fs.prototype = {
         if (lookups.hasOwnProperty(b)) {
           var checkDir = path.join(relativeTo, new Array(a).join('../'), b, mod);
           var packageFile = path.join(checkDir, lookups[b]);
-          var found = false;
-          var defaultFiles = [
-            'index.js',
-            modFile,
-            path.join('src', 'index.js'),
-            path.join('src', modFile),
-            path.join('lib', 'index.js'),
-            path.join('lib', modFile),
-            path.join('dist', 'index.js'),
-            path.join('dist', modFile)
-          ];
 
           if (fs.existsSync(packageFile)) {
             var pkg = require(packageFile);
@@ -76,43 +56,18 @@ Fs.prototype = {
               break check;
             }
           }
-
-          found = defaultFiles.some(function (file) {
-            file = path.join(checkDir, file);
-            if (fs.existsSync(file)) {
-              foundFile = file;
-              return true;
-            }
-          });
-
-          if (found) {
-            break check;
-          }
         }
       }
-    }
-
-    if (!foundFile) {
-      throw new Error('Could not find the module ' + mod + '.');
     }
 
     return foundFile;
   },
 
   resolve: function (file, relativeTo) {
-    if (path.isAbsolute(file)) {
-      return file;
-    }
-
-    if (file.indexOf(path.sep) === -1) {
-      return path.resolve(this.module(file, relativeTo));
-    }
-
-    if (['.js', '.json'].indexOf(path.extname(file)) === -1) {
-      file += '.js';
-    }
-
-    return this.relative(file, relativeTo);
+    return (this._map[file] && path.resolve(this._map[file])) ||
+      (path.isAbsolute(file) && file) ||
+      this.module(file, relativeTo) ||
+      this.relative(file, relativeTo);
   },
 
   relative: function (file, relativeTo) {
