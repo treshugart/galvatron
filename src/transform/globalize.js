@@ -15,7 +15,7 @@ function hash (str) {
 }
 
 function generateModuleName (file) {
-  return prefix + hash(fs.readFileSync(file).toString());
+  return prefix + hash(file);
 }
 
 function indent (code) {
