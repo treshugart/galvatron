@@ -29,7 +29,7 @@ function indent (code) {
   return lines.join('\n');
 }
 
-function relative (file) {
+function makePathRelative (file) {
   return path.relative(process.cwd(), file);
 }
 
@@ -52,7 +52,7 @@ module.exports = function () {
     data = indent(data);
     data = '(function () {\n' + data + '\n}).call(this);';
     data = generateModuleName(info.path) + ' = ' + data;
-    data = '// ' + relative(info.path) + '\n' + data;
+    data = '// ' + makePathRelative(info.path) + '\n' + data;
 
     return data;
   };
