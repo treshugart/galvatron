@@ -69,11 +69,12 @@ Fs.prototype = {
 
           if (fs.existsSync(packageFile)) {
             var pkg = require(packageFile);
-            var pkgMain = path.join(checkDir, pkg.main);
-
-            if (pkg.main && fs.existsSync(pkgMain)) {
-              foundFile = pkgMain;
-              break check;
+            if (pkg.main) {
+                var pkgMain = path.join(checkDir, pkg.main);
+                if (fs.existsSync(pkgMain)) {
+                  foundFile = pkgMain;
+                  break check;
+                }
             }
           }
 
