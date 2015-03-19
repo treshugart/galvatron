@@ -1,6 +1,7 @@
 {
     "globals": {
         "__dirname": false,
+        "exports": false,
         "module": false,
         "process": false,
         "require": false

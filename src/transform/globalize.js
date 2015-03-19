@@ -1,11 +1,10 @@
 'use strict';
 
 var crypto = require('crypto');
-var fs = require('fs');
 var path = require('path');
 
 var prefix = '__';
-var regexSourcemap = /\n*\s*\/\/.?\s*sourceMappingURL=(.*)/m;
+var regexAmd = /[^a-zA-Z0-9_$]define\s*\(/;
 var regexUseStrict = /\n*\s*['"]use strict['"];?\s*/gm;
 
 function hash (str) {
@@ -33,25 +32,88 @@ function makePathRelative (file) {
   return path.relative(process.cwd(), file);
 }
 
-module.exports = function () {
-  return function (data, info) {
-    var sourcemap = data.match(regexSourcemap);
-    sourcemap = sourcemap && sourcemap[1];
+function defineDependencies (imports, dependencies) {
+  var code = '';
+  var keyVals = imports.map(function (imp, idx) {
+    return '"' + imp + '": ' + generateModuleName(dependencies[idx]);
+  });
 
-    if (sourcemap) {
-      data = data.replace(regexSourcemap, '');
+  keyVals.unshift('"exports": exports');
+  keyVals.unshift('"module": module');
+  code = '\n' + indent(keyVals.join(',\n')) + '\n';
+  return '{' + code + '}';
+}
+
+function defineReplacement (name, deps, func) {
+  function overload (type) {
+    var typefn = type;
+
+    if (typeof typefn === 'string') {
+      typefn = function (ref) {
+        return type === 'array' ? Array.isArray(ref) : typeof ref === type;
+      };
     }
 
+    return function () {
+      return [].slice.call(arguments).filter(function (value) {
+        return typefn(value);
+      })[0];
+    };
+  }
+
+  func = overload('function')(func, deps, name);
+  deps = overload('array')(deps, name, []);
+  rval = func.apply(null, deps.map(function (value) {
+    return defineDependencies[value];
+  }));
+
+  if (rval) {
+    exports = module.exports = rval;
+  }
+}
+
+module.exports = function () {
+  return function (data, info) {
+    var isAmd = data.match(regexAmd);
+    var vars = [];
+
+    // Strict mode can cause problems with dependencies that you don't have
+    // control over. Assume the worst.
+    data = data.replace(regexUseStrict, '');
+
+    // Replace all requires with references to dependency globals.
     info.imports.forEach(function (imp, index) {
       data = data.replace('require("' + imp + '")', generateModuleName(info.dependencies[index]));
     });
 
-    data = data.replace(regexUseStrict, '');
-    data = 'var module = { exports: {} };\nvar exports = module.exports;\n\n' + data;
+    // We assume CommonJS because that's what we're using to convert it.
+    vars.push('var module = {\n' + indent('exports: {}') + '\n};');
+    vars.push('var exports = module.exports;');
+
+    // We only need to generate the AMD -> CommonJS shim if it's used.
+    if (isAmd) {
+      vars.push('var defineDependencies = ' + defineDependencies(info.imports, info.dependencies) + ';');
+      vars.push('var define = ' + defineReplacement + ';');
+      vars.push('define.amd = true;');
+    }
+
+    // Add in shim vars and add some spacing so it's more readable.
+    data = vars.join('\n') + '\n\n' + data;
+
+    // We assume this was set.
     data = data + '\n\nreturn module.exports';
+
+    // Readability.
     data = indent(data);
+
+    // Calling in the context of "this" ensures that if a module is using it as
+    // the global scope that it is what they expect it to be.
     data = '(function () {\n' + data + '\n}).call(this);';
+
+    // Assigns the module to a global variable.
     data = generateModuleName(info.path) + ' = ' + data;
+
+    // Comment will show relative path to the module file.
     data = '// ' + makePathRelative(info.path) + '\n' + data;
 
     return data;
