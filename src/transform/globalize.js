@@ -45,31 +45,12 @@ function defineDependencies (imports, dependencies) {
 }
 
 function defineReplacement (name, deps, func) {
-  function overload (type) {
-    var typefn = type;
-
-    if (typeof typefn === 'string') {
-      typefn = function (ref) {
-        return type === 'array' ? Array.isArray(ref) : typeof ref === type;
-      };
-    }
-
-    return function () {
-      return [].slice.call(arguments).filter(function (value) {
-        return typefn(value);
-      })[0];
-    };
-  }
-
-  func = overload('function')(func, deps, name);
-  deps = overload('array')(deps, name, []);
+  func = [func, deps, name].filter(function (cur) { return typeof cur === 'function'; })[0]
+  deps = [deps, name, []].filter(Array.isArray)[0];
   rval = func.apply(null, deps.map(function (value) {
     return defineDependencies[value];
   }));
-
-  if (rval) {
-    exports = module.exports = rval;
-  }
+  return rval && (exports = module.exports = rval);
 }
 
 module.exports = function () {
