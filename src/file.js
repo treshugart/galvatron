@@ -9,7 +9,6 @@ function File ($matcher, $transformer, file) {
   }
 
   cache[file] = this;
-
   this._matcher = $matcher;
   this._transformer = $transformer;
   this._file = file;
@@ -48,7 +47,6 @@ File.prototype = {
   expire: function () {
     delete cache[this.path];
     delete this._code;
-    delete this._dependencies;
     delete this._imports;
     delete this._post;
     delete this._pre;
