@@ -45,7 +45,8 @@ function defineDependencies (imports, dependencies) {
 }
 
 function defineReplacement (name, deps, func) {
-  func = [func, deps, name].filter(function (cur) { return typeof cur === 'function'; })[0]
+  var rval;
+  func = [func, deps, name].filter(function (cur) { return typeof cur === 'function'; })[0];
   deps = [deps, name, []].filter(Array.isArray)[0];
   rval = func.apply(null, deps.map(function (value) {
     return defineDependencies[value];
