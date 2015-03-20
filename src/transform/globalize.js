@@ -57,7 +57,7 @@ function defineReplacement (name, deps, func) {
 module.exports = function () {
   return function (data, info) {
     var isAmd = data.match(regexAmd);
-    var vars = [];
+    var shims = [];
 
     // Strict mode can cause problems with dependencies that you don't have
     // control over. Assume the worst.
@@ -69,18 +69,18 @@ module.exports = function () {
     });
 
     // We assume CommonJS because that's what we're using to convert it.
-    vars.push('var module = {\n' + indent('exports: {}') + '\n};');
-    vars.push('var exports = module.exports;');
+    shims.push('var module = {\n' + indent('exports: {}') + '\n};');
+    shims.push('var exports = module.exports;');
 
     // We only need to generate the AMD -> CommonJS shim if it's used.
     if (isAmd) {
-      vars.push('var defineDependencies = ' + defineDependencies(info.imports, info.dependencies) + ';');
-      vars.push('var define = ' + defineReplacement + ';');
-      vars.push('define.amd = true;');
+      shims.push('var defineDependencies = ' + defineDependencies(info.imports, info.dependencies) + ';');
+      shims.push('var define = ' + defineReplacement + ';');
+      shims.push('define.amd = true;');
     }
 
     // Add in shim vars and add some spacing so it's more readable.
-    data = vars.join('\n') + '\n\n' + data;
+    data = shims.join('\n') + '\n\n' + data;
 
     // We assume this was set.
     data = data + '\n\nreturn module.exports';
