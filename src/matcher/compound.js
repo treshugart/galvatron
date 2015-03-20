@@ -6,12 +6,8 @@ module.exports = function ($fs, matchers) {
   });
 
   return function (file, code) {
-    var matches = [];
-
-    matchers.forEach(function (matcher) {
-      matches = matches.concat(matcher(file, code));
-    });
-
-    return matches;
+    return matchers.reduce(function (arr, matcher) {
+      return arr.concat(matcher(file, code));
+    }, []);
   };
 };
