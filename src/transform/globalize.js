@@ -46,12 +46,31 @@ function defineDependencies (imports, dependencies) {
 
 function defineReplacement (name, deps, func) {
   var rval;
+  var type;
+
   func = [func, deps, name].filter(function (cur) { return typeof cur === 'function'; })[0];
   deps = [deps, name, []].filter(Array.isArray)[0];
-  rval = func.apply(null, deps.map(function (value) {
-    return defineDependencies[value];
-  }));
-  return rval && (exports = module.exports = rval);
+  rval = func.apply(null, deps.map(function (value) { return defineDependencies[value]; }));
+  type = typeof rval;
+
+  // Some processors like Babel don't check to make sure that the module value
+  // is not a primitive before calling Object.defineProperty() on it. We ensure
+  // it is an instance so that it can.
+  if (type === 'string') {
+    rval = new String(rval);
+  } else if (type === 'number') {
+    rval = new Number(rval);
+  } else if (type === 'boolean') {
+    rval = new Boolean(rval);
+  }
+
+  // Reset the exports to the defined module. This is how we convert AMD to
+  // CommonJS and ensures both can either co-exist, or be used separately. We
+  // only set it if it is not defined because there is no object representation
+  // of undefined, thus calling Object.defineProperty() on it would fail.
+  if (rval !== undefined) {
+    exports = module.exports = rval;
+  }
 }
 
 module.exports = function () {
