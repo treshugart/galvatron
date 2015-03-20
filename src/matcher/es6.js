@@ -2,13 +2,13 @@
 
 var regexToArray = require('../util/regex-to-array');
 
-function Matcher() {}
-Matcher.prototype = {
-  match: function (code) {
+module.exports = function ($fs) {
+  return function (file, code) {
     return regexToArray(/^\s*import[^'"]*['"]([^'"]+)['"];?/gm, code).map(function (imp) {
-      return imp[1];
+      return {
+        path: $fs.ext($fs.resolve(imp[1], file), 'js', ['js', 'json']),
+        value: imp[1]
+      };
     });
-  }
+  };
 };
-
-module.exports = Matcher;

@@ -1,12 +1,14 @@
 'use strict';
 
-var CommonJs = require('./commonjs');
-var Compound = require('./compound');
-var Es6 = require('./es6');
+var commonJs = require('./commonjs');
+var compound = require('./compound');
+var es6 = require('./es6');
+var less = require('./less');
 
-module.exports = function () {
-  return new Compound([
-    new CommonJs(),
-    new Es6()
+module.exports = function ($fs) {
+  return compound($fs, [
+    commonJs,
+    es6,
+    less
   ]);
 };

@@ -6,9 +6,9 @@ var gulpWatch = require('gulp-watch');
 var streams = {};
 var watched = {};
 
-function Watcher ($events, $fs, $tracer) {
+function Watcher ($events, $file, $tracer) {
   this._events = $events;
-  this._fs = $fs;
+  this._file = $file;
   this._tracer = $tracer;
 }
 
@@ -16,7 +16,7 @@ Watcher.prototype = {
   watch: function (bundle, callback) {
     var that = this;
     var watcher = gulpWatch(bundle.files, function (file) {
-      that._fs.file(file.path).clean();
+      that._file(file.path).expire();
 
       if (watched[file.path]) {
         return;
@@ -36,7 +36,7 @@ Watcher.prototype = {
 
           // If we don't uncache it then the file won't change and no new files
           // will be picked up.
-          that._fs.file(bundleFile).clean();
+          that._file(bundleFile).expire();
 
           // We actually have to write the main file to trigger a change.
           bundle.destinations(bundleFile).forEach(function (mainFile) {

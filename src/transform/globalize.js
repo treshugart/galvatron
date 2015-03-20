@@ -32,10 +32,10 @@ function makePathRelative (file) {
   return path.relative(process.cwd(), file);
 }
 
-function defineDependencies (imports, dependencies) {
+function defineDependencies (imports) {
   var code = '';
-  var keyVals = imports.map(function (imp, idx) {
-    return '"' + imp + '": ' + generateModuleName(dependencies[idx]);
+  var keyVals = imports.map(function (imp) {
+    return '"' + imp.value + '": ' + generateModuleName(imp.path);
   });
 
   keyVals.unshift('"exports": exports');
@@ -83,8 +83,8 @@ module.exports = function () {
     data = data.replace(regexUseStrict, '');
 
     // Replace all requires with references to dependency globals.
-    info.imports.forEach(function (imp, index) {
-      data = data.replace('require("' + imp + '")', generateModuleName(info.dependencies[index]));
+    info.imports.forEach(function (imp) {
+      data = data.replace('require("' + imp.value + '")', generateModuleName(imp.path));
     });
 
     // We assume CommonJS because that's what we're using to convert it.
@@ -93,7 +93,7 @@ module.exports = function () {
 
     // We only need to generate the AMD -> CommonJS shim if it's used.
     if (isAmd) {
-      shims.push('var defineDependencies = ' + defineDependencies(info.imports, info.dependencies) + ';');
+      shims.push('var defineDependencies = ' + defineDependencies(info.imports) + ';');
       shims.push('var define = ' + defineReplacement + ';');
       shims.push('define.amd = true;');
     }

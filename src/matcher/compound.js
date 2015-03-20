@@ -1,19 +1,13 @@
 'use strict';
 
-function Matcher (matchers) {
-  this._matchers = matchers;
-}
+module.exports = function ($fs, matchers) {
+  matchers = matchers.map(function (matcher) {
+    return matcher($fs);
+  });
 
-Matcher.prototype = {
-  match: function (code) {
-    var matches = [];
-
-    this._matchers.forEach(function (matcher) {
-      matches = matches.concat(matcher.match(code));
-    });
-
-    return matches;
-  }
+  return function (file, code) {
+    return matchers.reduce(function (arr, matcher) {
+      return arr.concat(matcher(file, code));
+    }, []);
+  };
 };
-
-module.exports = Matcher;
