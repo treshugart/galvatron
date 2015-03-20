@@ -1,11 +1,10 @@
 'use strict';
 
 var crypto = require('crypto');
-var fs = require('fs');
 var path = require('path');
 
 var prefix = '__';
-var regexSourcemap = /\n*\s*\/\/.?\s*sourceMappingURL=(.*)/m;
+var regexAmd = /[^a-zA-Z0-9_$]define\s*\(/;
 var regexUseStrict = /\n*\s*['"]use strict['"];?\s*/gm;
 
 function hash (str) {
@@ -29,30 +28,94 @@ function indent (code) {
   return lines.join('\n');
 }
 
-function relative (file) {
+function makePathRelative (file) {
   return path.relative(process.cwd(), file);
+}
+
+function defineDependencies (imports, dependencies) {
+  var code = '';
+  var keyVals = imports.map(function (imp, idx) {
+    return '"' + imp + '": ' + generateModuleName(dependencies[idx]);
+  });
+
+  keyVals.unshift('"exports": exports');
+  keyVals.unshift('"module": module');
+  code = '\n' + indent(keyVals.join(',\n')) + '\n';
+  return '{' + code + '}';
+}
+
+function defineReplacement (name, deps, func) {
+  var rval;
+  var type;
+
+  func = [func, deps, name].filter(function (cur) { return typeof cur === 'function'; })[0];
+  deps = [deps, name, []].filter(Array.isArray)[0];
+  rval = func.apply(null, deps.map(function (value) { return defineDependencies[value]; }));
+  type = typeof rval;
+
+  // Some processors like Babel don't check to make sure that the module value
+  // is not a primitive before calling Object.defineProperty() on it. We ensure
+  // it is an instance so that it can.
+  if (type === 'string') {
+    rval = new String(rval);
+  } else if (type === 'number') {
+    rval = new Number(rval);
+  } else if (type === 'boolean') {
+    rval = new Boolean(rval);
+  }
+
+  // Reset the exports to the defined module. This is how we convert AMD to
+  // CommonJS and ensures both can either co-exist, or be used separately. We
+  // only set it if it is not defined because there is no object representation
+  // of undefined, thus calling Object.defineProperty() on it would fail.
+  if (rval !== undefined) {
+    exports = module.exports = rval;
+  }
 }
 
 module.exports = function () {
   return function (data, info) {
-    var sourcemap = data.match(regexSourcemap);
-    sourcemap = sourcemap && sourcemap[1];
+    var isAmd = data.match(regexAmd);
+    var shims = [];
 
-    if (sourcemap) {
-      data = data.replace(regexSourcemap, '');
-    }
+    // Strict mode can cause problems with dependencies that you don't have
+    // control over. Assume the worst.
+    data = data.replace(regexUseStrict, '');
 
+    // Replace all requires with references to dependency globals.
     info.imports.forEach(function (imp, index) {
       data = data.replace('require("' + imp + '")', generateModuleName(info.dependencies[index]));
     });
 
-    data = data.replace(regexUseStrict, '');
-    data = 'var module = { exports: {} };\nvar exports = module.exports;\n\n' + data;
+    // We assume CommonJS because that's what we're using to convert it.
+    shims.push('var module = {\n' + indent('exports: {}') + '\n};');
+    shims.push('var exports = module.exports;');
+
+    // We only need to generate the AMD -> CommonJS shim if it's used.
+    if (isAmd) {
+      shims.push('var defineDependencies = ' + defineDependencies(info.imports, info.dependencies) + ';');
+      shims.push('var define = ' + defineReplacement + ';');
+      shims.push('define.amd = true;');
+    }
+
+    // Add in shim vars and add some spacing so it's more readable.
+    data = shims.join('\n') + '\n\n' + data;
+
+    // We assume this was set.
     data = data + '\n\nreturn module.exports';
+
+    // Readability.
     data = indent(data);
+
+    // Calling in the context of "this" ensures that if a module is using it as
+    // the global scope that it is what they expect it to be.
     data = '(function () {\n' + data + '\n}).call(this);';
+
+    // Assigns the module to a global variable.
     data = generateModuleName(info.path) + ' = ' + data;
-    data = '// ' + relative(info.path) + '\n' + data;
+
+    // Comment will show relative path to the module file.
+    data = '// ' + makePathRelative(info.path) + '\n' + data;
 
     return data;
   };
