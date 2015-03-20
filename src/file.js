@@ -40,10 +40,6 @@ File.prototype = {
     }));
   },
 
-  cached: function () {
-    return cache[this.path];
-  },
-
   expire: function () {
     delete cache[this.path];
     delete this._code;
