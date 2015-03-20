@@ -35,7 +35,7 @@ function makePathRelative (file) {
 function defineDependencies (imports) {
   var code = '';
   var keyVals = imports.map(function (imp) {
-    return '"' + imp + '": ' + generateModuleName(imp.path);
+    return '"' + imp.value + '": ' + generateModuleName(imp.path);
   });
 
   keyVals.unshift('"exports": exports');
