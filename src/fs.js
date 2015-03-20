@@ -8,9 +8,12 @@ function Fs () {
 }
 
 Fs.prototype = {
-  ext: function (file, ext, exts) {
-    exts = exts || [ext];
-    return exts.indexOf((path.extname(file) || '.').split('.')[1]) === -1 ? file + '.' + ext : file;
+  ext: function (file, defaultExt, validExts) {
+    var fileExt = (path.extname(file) || '.').split('.')[1];
+    validExts = validExts || [defaultExt];
+    return validExts.indexOf(fileExt) === -1 ?
+      file + '.' + defaultExt :
+      file;
   },
 
   map: function (map, path) {
