@@ -89,6 +89,8 @@ Bundle.prototype = {
 
   compile: function (paths) {
     var that = this;
+    var bundle = '';
+    var bundled = [];
     var common = this.common;
     var files = this.files;
     var opts = this._options;
@@ -104,8 +106,6 @@ Bundle.prototype = {
         return;
       }
 
-      that._events.emit('bundle', file);
-
       // Prepend the common dependencies if our option matches the file.
       if (typeof opts.common === 'string' && minimatch(file, opts.common)) {
         traced = traced.concat(common);
@@ -118,11 +118,23 @@ Bundle.prototype = {
           traced.push(dependency.path);
         }
       });
+
+      // So that we can emit an event of which files were bundled.
+      bundled.push(file);
     });
 
-    return traced.map(function (file) {
+    // Compile each file in the bundle.
+    bundle = traced.map(function (file, index) {
+      that._events.emit('compile', file.path, index, traced, bundled);
       return that._file(file).post;
-    }).join(this._options.joiner);
+    });
+
+    // Concatenate.
+    bundle = bundle.join(this._options.joiner);
+
+    this._events.emit('bundle', bundle, bundled);
+
+    return bundle;
   },
 
   compileOne: function (file) {
