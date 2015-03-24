@@ -31,8 +31,8 @@ Watcher.prototype = {
         }
 
         // Create an individual watcher for this file.
-        streams[bundleFile] = gulpWatch(bundleFile, function (bundleFile) {
-          bundleFile = bundleFile.path;
+        streams[bundleFile] = gulpWatch(bundleFile, function (bundleFileVinyl) {
+          bundleFile = bundleFileVinyl.path;
 
           // If we don't uncache it then the file won't change and no new files
           // will be picked up.
@@ -55,6 +55,10 @@ Watcher.prototype = {
             }
           });
         });
+
+        streams[bundleFile].on('error', function (error) {
+          that._events.emit('error', error, bundleFile);
+        });
       });
     });
 
@@ -64,6 +68,10 @@ Watcher.prototype = {
         streams[name].close();
         delete streams[name];
       });
+    });
+
+    watcher.on('error', function (error) {
+      that._events.emit('error', error);
     });
 
     return watcher;
