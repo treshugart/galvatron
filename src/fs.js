@@ -35,13 +35,13 @@ Fs.prototype = {
       return;
     }
 
+    relativeTo = relativeTo ? path.dirname(relativeTo) : process.cwd();
+    var dirs = relativeTo.split(path.sep);
     var foundFile;
-    var dirs = __dirname.split(path.sep);
     var lookups = {
       'bower_components': 'bower.json',
       'node_modules': 'package.json'
     };
-    relativeTo = relativeTo ? path.dirname(relativeTo) : process.cwd();
 
     check:
     for (var a = 0; a < dirs.length; a++) {
