@@ -125,7 +125,7 @@ Bundle.prototype = {
 
     // Compile each file in the bundle.
     bundle = traced.map(function (file, index) {
-      that._events.emit('compile', file.path, index, traced, bundled);
+      that._events.emit('compile', file, index, traced, bundled);
       return that._file(file).post;
     });
 
