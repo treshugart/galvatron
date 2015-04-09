@@ -85,6 +85,7 @@ module.exports = function () {
     // Replace all requires with references to dependency globals.
     info.imports.forEach(function (imp) {
       data = data.replace('require("' + imp.value + '")', generateModuleName(imp.path));
+      data = data.replace("require('" + imp.value + "')", generateModuleName(imp.path));
     });
 
     // We assume CommonJS because that's what we're using to convert it.
@@ -102,7 +103,7 @@ module.exports = function () {
     data = shims.join('\n') + '\n\n' + data;
 
     // We assume this was set.
-    data = data + '\n\nreturn module.exports';
+    data = data + '\n\nreturn module.exports;';
 
     // Readability.
     data = indent(data);
