@@ -30,9 +30,23 @@ Fs.prototype = {
     return this;
   },
 
-  module: function (mod, relativeTo) {
-    if (mod.indexOf(path.sep) !== -1) {
+  module: function (request, relativeTo) {
+    if (request[0] === '.') {
+      // if the request is ./ or ../ etc, this isn't
+      // a request for a module
       return;
+    }
+
+    var mod;
+    if (request.indexOf(path.sep) !== -1) {
+      // the request is a deep lookup like `require('foo/bar/baz')`
+      // use 'foo' as the module and save the rest ('bar/baz')
+      // for later.
+      var split = request.split(path.sep);
+      mod = split.shift();
+      request = split.join(path.sep);
+    } else {
+      mod = request;
     }
 
     relativeTo = relativeTo ? path.dirname(relativeTo) : process.cwd();
@@ -50,9 +64,16 @@ Fs.prototype = {
           var checkDir = path.join(relativeTo, new Array(a).join('../'), b, mod);
           var packageFile = path.join(checkDir, lookups[b]);
 
-          if (fs.existsSync(packageFile)) {
+          if (request.length && fs.existsSync(checkDir)) {
+            // this is a deep lookup into the package,
+            // resolve with that if the directory exists
+            foundFile = path.resolve(checkDir, request);
+            break check;
+          } else if (fs.existsSync(packageFile)) {
             var pkg = require(packageFile);
+
             if (pkg.main) {
+                // otherwise, return the module's main entry point.
                 var pkgMain = path.join(checkDir, pkg.main);
                 if (fs.existsSync(pkgMain)) {
                   foundFile = pkgMain;
@@ -67,9 +88,29 @@ Fs.prototype = {
     return foundFile;
   },
 
+  expand: function (file) {
+      if (this._map[file]) {
+          // return early for an exact match
+          return path.resolve(this._map[file]);
+      }
+
+      for (var alias in this._map) {
+          if(this._map.hasOwnProperty(alias)) {
+              if (file.indexOf(alias) === 0) {
+                  // the file path begins with the alias, exchange that
+                  // for the expanded path
+                  return path.resolve(file.replace(alias, this._map[alias]));
+              }
+          }
+      }
+
+      return file;
+  },
+
   resolve: function (file, relativeTo) {
-    return (this._map[file] && path.resolve(this._map[file])) ||
-      (path.isAbsolute(file) && file) ||
+    file = this.expand(file);
+
+    return (path.isAbsolute(file) && file) ||
       this.module(file, relativeTo) ||
       this.relative(file, relativeTo);
   },
