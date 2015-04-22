@@ -16,6 +16,11 @@ Fs.prototype = {
       file;
   },
 
+  lookups: {
+    'bower_components': 'bower.json',
+    'node_modules': 'package.json'
+  },
+
   map: function (map, path) {
     if (typeof map === 'object') {
       for (var a in map) {
@@ -52,17 +57,13 @@ Fs.prototype = {
     relativeTo = relativeTo ? path.dirname(relativeTo) : process.cwd();
     var dirs = relativeTo.split(path.sep);
     var foundFile;
-    var lookups = {
-      'bower_components': 'bower.json',
-      'node_modules': 'package.json'
-    };
 
     check:
     for (var a = 0; a < dirs.length; a++) {
-      for (var b in lookups) {
-        if (lookups.hasOwnProperty(b)) {
+      for (var b in this.lookups) {
+        if (this.lookups.hasOwnProperty(b)) {
           var checkDir = path.join(relativeTo, new Array(a).join('../'), b, mod);
-          var packageFile = path.join(checkDir, lookups[b]);
+          var packageFile = path.join(checkDir, this.lookups[b]);
 
           if (request.length && fs.existsSync(checkDir)) {
             // this is a deep lookup into the package,
