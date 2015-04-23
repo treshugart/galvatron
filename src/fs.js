@@ -98,7 +98,7 @@ Fs.prototype = {
       for (var alias in this._map) {
         if (this._map.hasOwnProperty(alias)) {
           if (file.indexOf(alias) === 0) {
-              // the file path begins with the alias, exchange that
+            // the file path begins with the alias, exchange that
             // for the expanded path
             return path.resolve(file.replace(alias, this._map[alias]));
           }
