@@ -52,6 +52,7 @@ Fs.prototype = {
       request = split.join(path.sep);
     } else {
       mod = request;
+      request = '';
     }
 
     relativeTo = relativeTo ? path.dirname(relativeTo) : process.cwd();
