@@ -90,22 +90,22 @@ Fs.prototype = {
   },
 
   expand: function (file) {
-      if (this._map[file]) {
-        // return early for an exact match
-        return path.resolve(this._map[file]);
-      }
+    if (this._map[file]) {
+      // return early for an exact match
+      return path.resolve(this._map[file]);
+    }
 
-      for (var alias in this._map) {
-        if (this._map.hasOwnProperty(alias)) {
-          if (file.indexOf(alias) === 0) {
-            // the file path begins with the alias, exchange that
-            // for the expanded path
-            return path.resolve(file.replace(alias, this._map[alias]));
-          }
+    for (var alias in this._map) {
+      if (this._map.hasOwnProperty(alias)) {
+        if (file.indexOf(alias) === 0) {
+          // the file path begins with the alias, exchange that
+          // for the expanded path
+          return path.resolve(file.replace(alias, this._map[alias]));
         }
       }
+    }
 
-      return file;
+    return file;
   },
 
   resolve: function (file, relativeTo) {
