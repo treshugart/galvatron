@@ -5,7 +5,7 @@ var path = require('path');
 
 var prefix = '__';
 var regexAmd = /[^a-zA-Z0-9_$]define\s*\(/;
-var regexUseStrict = /\n*\s*['"]use strict['"];?\s*/gm;
+var regexUseStrict = /\n\s*['"]use strict['"];?/g;
 
 function hash (str) {
   var cryp = crypto.createHash('md5');
