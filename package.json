@@ -39,6 +39,9 @@
   "dependencies": {
     "babel": "*",
     "crypto": "0.0.3",
+    "debug": "^2.1.3",
+    "detective-cjs": "^1.0.2",
+    "detective-es6": "^1.1.0",
     "extend": "^2.0.0",
     "glob": "^4.4.1",
     "gulp-watch": "^4.1.1",
