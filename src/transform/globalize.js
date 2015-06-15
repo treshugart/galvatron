@@ -99,7 +99,7 @@ module.exports = function () {
     // Replace all requires with references to dependency globals.
     info.imports.forEach(function (imp) {
       data = data.replace('require("' + imp.value + '")', generateModuleName(imp.path));
-      data = data.replace("require('" + imp.value + "')", generateModuleName(imp.path));
+      data = data.replace('require(\'' + imp.value + '\')', generateModuleName(imp.path));
     });
 
     // We assume CommonJS because that's what we're using to convert it.
