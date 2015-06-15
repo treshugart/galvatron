@@ -1,10 +1,11 @@
 'use strict';
 
 var crypto = require('crypto');
+var esprima = require('esprima');
+var estraverse = require('estraverse');
 var path = require('path');
 
 var prefix = '__';
-var regexAmd = /[^a-zA-Z0-9_$]define\s*\(/;
 var regexUseStrict = /\n\s*['"]use strict['"];?/g;
 
 function hash (str) {
@@ -57,11 +58,11 @@ function defineReplacement (name, deps, func) {
   // is not a primitive before calling Object.defineProperty() on it. We ensure
   // it is an instance so that it can.
   if (type === 'string') {
-    rval = new String(rval);
+    rval = String(rval);
   } else if (type === 'number') {
-    rval = new Number(rval);
+    rval = Number(rval);
   } else if (type === 'boolean') {
-    rval = new Boolean(rval);
+    rval = Boolean(rval);
   }
 
   // Reset the exports to the defined module. This is how we convert AMD to
@@ -73,9 +74,22 @@ function defineReplacement (name, deps, func) {
   }
 }
 
+function hasDefineCall (data) {
+  var hasDefine = false;
+  estraverse.traverse(esprima.parse(data), {
+    enter: function (node) {
+      if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'define') {
+        hasDefine = true;
+        this.break();
+      }
+    }
+  });
+  return hasDefine;
+}
+
 module.exports = function () {
   return function (data, info) {
-    var isAmd = data.match(regexAmd);
+    var isAmd = hasDefineCall(data);
     var shims = [];
 
     // Strict mode can cause problems with dependencies that you don't have

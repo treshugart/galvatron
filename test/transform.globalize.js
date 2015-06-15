@@ -22,7 +22,7 @@ mocha.describe('transform/globalize', function () {
       '',
       'function something () {',
       '  "use strict";',
-      '  return function () {})();',
+      '  return function () {};',
       '}'
     );
     var result = globalize(data, {
@@ -40,11 +40,31 @@ mocha.describe('transform/globalize', function () {
       '  ',
       '  ',
       '  function something () {',
-      '    return function () {})();',
+      '    return function () {};',
       '  }',
       '  ',
       '  return module.exports;',
       '}).call(this);'
     ));
+  });
+
+  mocha.describe('amd', function () {
+    mocha.it('define() as first thing in string', function () {
+      var data = 'define()';
+      var result = globalize(data, { imports: [], path: 'test.js' });
+      expect(result).to.contain('var define = function defineReplacement');
+    });
+
+    mocha.it('define() anywhere in a string', function () {
+      var data = 'something && define()';
+      var result = globalize(data, { imports: [], path: 'test.js' });
+      expect(result).to.contain('var define = function defineReplacement');
+    });
+
+    mocha.it('define() as part of another function call (i.e. somedefine())', function () {
+      var data = 'somedefine()';
+      var result = globalize(data, { imports: [], path: 'test.js' });
+      expect(result).to.not.contain('var define = function defineReplacement');
+    });
   });
 });
