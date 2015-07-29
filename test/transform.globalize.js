@@ -7,9 +7,10 @@ var transform = require('../src/transform/globalize');
 
 function parse (data) {
   var name = 'test.js';
+  var parsed = recast.parse(data, { sourceFileName: name });
   return {
-    ast: recast.parse(data),
-    map: false,
+    ast: parsed,
+    map: recast.print(parsed, { sourceMapName: name }).map,
     name: name
   };
 }
@@ -108,13 +109,15 @@ mocha.describe('transform.globalize', function () {
     });
 
     mocha.it('transform source map', function () {
+      var parsed = parse(input);
       var output = globalize({
-        ast: parse(input).ast,
-        path: 'test.js',
+        ast: parsed.ast,
         imports: [{
           path: 'something',
           value: '"something"'
-        }]
+        }],
+        map: parsed.map,
+        path: 'test.js'
       });
     });
   });

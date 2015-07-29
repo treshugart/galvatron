@@ -6,7 +6,6 @@ var recast = require('recast');
 
 var astBuilder = recast.types.builders;
 var prefix = '__';
-var sourceMapToken = '# sourceMappingURL=data:application/json;base64,';
 
 function hash (str) {
   var cryp = crypto.createHash('md5');
@@ -89,26 +88,8 @@ function hasDefineCall (ast) {
   return hasDefine;
 }
 
-function parseSourceMap (ast) {
-  var sourceMap;
-
-  recast.visit(ast, {
-    visitComment: function (path) {
-      var value = path.value.value;
-      if (value.indexOf(sourceMapToken) === 0) {
-        sourceMap = value.split(sourceMapToken)[1];
-      }
-      this.traverse(path);
-    }
-  });
-
-  return sourceMap ? JSON.parse(new Buffer(sourceMap, 'base64').toString()) : '';
-}
-
-module.exports = function (options) {
-  options = options || {};
+module.exports = function () {
   return function (data) {
-    var sourceMap = parseSourceMap(data.ast);
     var astBody = data.ast.program.body;
     var importPaths = data.imports.map(function (imp) {
       return imp.path;
@@ -125,15 +106,6 @@ module.exports = function (options) {
             var foundImportPathName = generateModuleName(foundImportPath);
             path.replace(astBuilder.identifier(foundImportPathName));
           }
-        }
-        this.traverse(path);
-      },
-
-      // Replace source map.
-      visitComment: function (path) {
-        var value = path.value.value;
-        if (value.indexOf(sourceMapToken) === 0) {
-          path.replace();
         }
         this.traverse(path);
       },
@@ -192,7 +164,7 @@ module.exports = function (options) {
     return {
       ast: wrapper,
       map: recast.print(wrapper, {
-        sourceMapName: sourceMap && data.path
+        inputSourceMap: data.map
       }).map
     };
   };

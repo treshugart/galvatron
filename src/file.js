@@ -17,7 +17,9 @@ function File ($matcher, $transformer, file) {
 
 File.prototype = {
   get ast () {
-    return this._ast || (this._ast = recast.parse(this.code));
+    return this._ast || (this._ast = recast.parse(this.code, {
+      sourceFileName: this.path
+    }));
   },
 
   get code () {
@@ -35,9 +37,9 @@ File.prototype = {
   get transformed () {
     if (!this._transformed) {
       this._transformed = this._transformer.transform({
-        ast: this._ast,
+        ast: this.ast,
         imports: this.imports,
-        map: null,
+        map: recast.print(this.ast, { sourceMapName: this.path }),
         path: this.path
       });
     }
