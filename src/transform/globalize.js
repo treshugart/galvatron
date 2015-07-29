@@ -40,6 +40,7 @@ function defineDependencies (imports) {
 
   keyVals.unshift('"exports": exports');
   keyVals.unshift('"module": module');
+  keyVals.unshift('"require": require');
   code = '\n' + indent(keyVals.join(',\n')) + '\n';
   return '{' + code + '}';
 }
