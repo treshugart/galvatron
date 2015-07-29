@@ -4,9 +4,9 @@ var crypto = require('crypto');
 var esprima = require('esprima');
 var estraverse = require('estraverse');
 var path = require('path');
+var recast = require('recast');
 
 var prefix = '__';
-var regexUseStrict = /\n\s*['"]use strict['"];?/g;
 
 function hash (str) {
   var cryp = crypto.createHash('md5');
@@ -87,51 +87,81 @@ function hasDefineCall (data) {
   return hasDefine;
 }
 
-module.exports = function () {
+module.exports = function (options) {
+  options = options || {};
   return function (data, info) {
     var isAmd = hasDefineCall(data);
-    var shims = [];
-
-    // Strict mode can cause problems with dependencies that you don't have
-    // control over. Assume the worst.
-    data = data.replace(regexUseStrict, '');
-
-    // Replace all requires with references to dependency globals.
-    info.imports.forEach(function (imp) {
-      data = data.replace('require("' + imp.value + '")', generateModuleName(imp.path));
-      data = data.replace('require(\'' + imp.value + '\')', generateModuleName(imp.path));
+    var ast = recast.parse(data);
+    var astBody = ast.program.body;
+    var astBuilder = recast.types.builders;
+    var importPaths = info.imports.map(function (imp) {
+      return imp.path;
     });
 
-    // We assume CommonJS because that's what we're using to convert it.
-    shims.push('var module = {\n' + indent('exports: {}') + '\n};');
-    shims.push('var exports = module.exports;');
+    // Replace "use strict".
+    recast.visit(ast, {
+      visitExpressionStatement: function (path) {
+        if (path.get('expression', 'value').value === 'use strict') {
+          path.replace(null);
+        }
+        this.traverse(path);
+      }
+    });
 
-    // We only need to generate the AMD -> CommonJS shim if it's used.
+    // Replace imports.
+    recast.visit(ast, {
+      visitCallExpression: function (path) {
+        if (path.get('callee').value.name === 'require') {
+          var importPath = path.get('arguments', 0).value.value;
+          var importPathIndex = importPaths.indexOf(importPath);
+          if (importPathIndex > -1) {
+            var foundImportPath = importPaths[importPathIndex];
+            var foundImportPathName = generateModuleName(foundImportPath);
+            path.replace(astBuilder.identifier(foundImportPathName));
+          }
+        }
+        this.traverse(path);
+      }
+    });
+
+    // Shim CommonJS.
+    var shims = [
+      'var module = { exports: {} };',
+      'var exports = module.exports;'
+    ];
+
+    // Shim AMD to use CommonsJS.
     if (isAmd) {
-      shims.push('var defineDependencies = ' + defineDependencies(info.imports) + ';');
-      shims.push('var define = ' + defineReplacement + ';');
-      shims.push('define.amd = true;');
+      shims.push(
+        'var defineDependencies = ' + defineDependencies(info.imports) + ';',
+        'var define = ' + defineReplacement + ';',
+        'define.amd = true;'
+      );
     }
 
-    // Add in shim vars and add some spacing so it's more readable.
-    data = shims.join('\n') + '\n\n' + data;
+    // Add shims.
+    astBody.unshift.apply(astBody, recast.parse(shims.join('\n')).program.body);
 
-    // We assume this was set.
-    data = data + '\n\nreturn module.exports;';
+    // Return CommonJS exports.
+    astBody.push(recast.parse('\n\nreturn module.exports;').program.body);
 
-    // Readability.
-    data = indent(data);
+    // Wrap in IIFE bound to global.
+    var wrapper = recast.parse(
+      '// ' + makePathRelative(info.path) + '\n' +
+      generateModuleName(info.path) + ' = (function () {}).call(this);'
+    );
+    var wrapperBody = wrapper.program.body;
+    var wrapperFnBody = wrapperBody[0].expression.right.callee.object.body.body;
+    astBody.forEach(function (item) {
+      // TODO Is there a better way to append all items no matter their type?
+      if (Array.isArray(item)) {
+        wrapperFnBody.push.apply(wrapperFnBody, item);
+      } else {
+        wrapperFnBody.push(item);
+      }
+    });
 
-    // Calling in the context of "this" ensures that if a module is using it as
-    // the global scope that it is what they expect it to be.
-    data = '(function () {\n' + data + '\n}).call(this);';
-
-    // Assigns the module to a global variable.
-    data = generateModuleName(info.path) + ' = ' + data;
-
-    // Comment will show relative path to the module file.
-    data = '// ' + makePathRelative(info.path) + '\n' + data;
-
-    return data;
+    // Compile.
+    return recast.print(wrapper).code;
   };
 };

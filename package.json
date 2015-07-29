@@ -50,6 +50,7 @@
     "gulp-watch": "^4.1.1",
     "map-stream": "0.0.5",
     "minimatch": "^2.0.1",
+    "recast": "^0.10.22",
     "through": "^2.3.6",
     "ubercod": "0.1.1",
     "vinyl-transform": "^1.0.0"
