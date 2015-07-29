@@ -1,6 +1,11 @@
 # Galvatron
 
-Library for transforming, tracing and concatenating CommonJS files.
+Library for tracing, transforming and concatenating any type of import in any type of source file using pre and post transforms. It currently has built-in support for:
+
+1. ES6
+2. AMD
+3. CommonJS
+4. Less (experimental)
 
 ## Installing
 
