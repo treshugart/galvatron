@@ -42,7 +42,7 @@ mocha.describe('transform.globalize', function () {
       imports: [],
       path: 'test.js'
     });
-    expect(result).to.equal([
+    expect(print(result)).to.equal([
       '// test.js',
       '__1dd241c4cd3fd1dd89c570cee98b79dd = (function () {',
       '  var module = { exports: {} };',
@@ -65,7 +65,7 @@ mocha.describe('transform.globalize', function () {
         imports: [],
         path: 'test.js'
       });
-      expect(result).to.contain('var define = function defineReplacement');
+      expect(print(result)).to.contain('var define = function defineReplacement');
     });
 
     mocha.it('define() anywhere in a string', function () {
@@ -75,7 +75,7 @@ mocha.describe('transform.globalize', function () {
         imports: [],
         path: 'test.js'
       });
-      expect(result).to.contain('var define = function defineReplacement');
+      expect(print(result)).to.contain('var define = function defineReplacement');
     });
 
     mocha.it('define() as part of another function call (i.e. somedefine())', function () {
@@ -85,7 +85,7 @@ mocha.describe('transform.globalize', function () {
         imports: [],
         path: 'test.js'
       });
-      expect(result).to.not.contain('var define = function defineReplacement');
+      expect(print(result)).to.not.contain('var define = function defineReplacement');
     });
   });
 
@@ -104,7 +104,7 @@ mocha.describe('transform.globalize', function () {
         path: 'test.js',
         imports: []
       });
-      expect(output).to.not.contain('sourceMappingURL');
+      expect(print(output)).to.not.contain('sourceMappingURL');
     });
 
     mocha.it('transform source map', function () {

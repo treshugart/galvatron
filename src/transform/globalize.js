@@ -105,10 +105,6 @@ function parseSourceMap (ast) {
   return sourceMap ? JSON.parse(new Buffer(sourceMap, 'base64').toString()) : '';
 }
 
-function compileSourceMap (map) {
-  return sourceMapToken + new Buffer(JSON.stringify(map)).toString('base64');
-}
-
 module.exports = function (options) {
   options = options || {};
   return function (data) {
@@ -193,15 +189,11 @@ module.exports = function (options) {
       }
     });
 
-    var parsed = recast.print(wrapper, {
-      sourceMapName: sourceMap && data.path
-    });
-    var code = parsed.code;
-
-    if (parsed.map) {
-      code += '\n\n//' + compileSourceMap(parsed.map);
-    }
-
-    return code;
+    return {
+      ast: wrapper,
+      map: recast.print(wrapper, {
+        sourceMapName: sourceMap && data.path
+      }).map
+    };
   };
 };
