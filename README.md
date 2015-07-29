@@ -27,7 +27,7 @@ The most common usage for Galvatron is to take a single file and transform it in
 var fs = require('fs');
 var galvatron = require('galvatron');
 
-fs.writeFile('dist/*.js', galvatron.bundle('src/index.js').compile());
+fs.writeFile('dist/index.js', galvatron.bundle('src/index.js').compile());
 ```
 
 ### Multiple File Transformation
