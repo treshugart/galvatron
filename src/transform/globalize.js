@@ -35,7 +35,7 @@ function makePathRelative (file) {
 function defineDependencies (imports) {
   var code = '';
   var keyVals = imports.map(function (imp) {
-    return '"' + imp.value + '": ' + generateModuleName(imp.path);
+    return '"' + imp + '": ' + generateModuleName(imp);
   });
 
   keyVals.unshift('"exports": exports');
@@ -91,6 +91,8 @@ function hasDefineCall (ast) {
 module.exports = function () {
   return function (data) {
     var astBody = data.ast.program.body;
+
+    // TODO Hash these based on original content.
     var importPaths = data.imports.map(function (imp) {
       return imp.path;
     });
@@ -128,7 +130,7 @@ module.exports = function () {
     // Shim AMD to use CommonsJS.
     if (hasDefineCall(data.ast)) {
       shims.push(
-        'var defineDependencies = ' + defineDependencies(data.imports) + ';',
+        'var defineDependencies = ' + defineDependencies(importPaths) + ';',
         'var define = ' + defineReplacement + ';',
         'define.amd = true;'
       );
