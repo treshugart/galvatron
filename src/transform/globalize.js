@@ -1,12 +1,12 @@
 'use strict';
 
 var crypto = require('crypto');
-var esprima = require('esprima');
-var estraverse = require('estraverse');
 var path = require('path');
 var recast = require('recast');
 
+var astBuilder = recast.types.builders;
 var prefix = '__';
+var sourceMapToken = '# sourceMappingURL=data:application/json;base64,';
 
 function hash (str) {
   var cryp = crypto.createHash('md5');
@@ -74,42 +74,56 @@ function defineReplacement (name, deps, func) {
   }
 }
 
-function hasDefineCall (data) {
+function hasDefineCall (ast) {
   var hasDefine = false;
-  estraverse.traverse(esprima.parse(data), {
-    enter: function (node) {
-      if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'define') {
+  recast.visit(ast, {
+    visitCallExpression: function (node) {
+      var callee = node.value.callee;
+      if (callee.type === 'Identifier' && callee.name === 'define') {
         hasDefine = true;
-        this.break();
+        return false;
       }
+      this.traverse(node);
     }
   });
   return hasDefine;
 }
 
+function parseSourceMap (data) {
+  var sourceMap;
+
+  recast.visit(recast.parse(data), {
+    visitComment: function (path) {
+      var value = path.value.value;
+      if (value.indexOf(sourceMapToken) === 0) {
+        sourceMap = value.split(sourceMapToken)[1];
+      }
+      this.traverse(path);
+    }
+  });
+
+  return sourceMap ? JSON.parse(new Buffer(sourceMap, 'base64').toString()) : '';
+}
+
+function compileSourceMap (map) {
+  return sourceMapToken + new Buffer(JSON.stringify(map)).toString('base64');
+}
+
 module.exports = function (options) {
   options = options || {};
   return function (data, info) {
-    var isAmd = hasDefineCall(data);
-    var ast = recast.parse(data);
+    var sourceMap = parseSourceMap(data);
+    var ast = recast.parse(data, {
+      sourceFileName: info.path,
+      inputSourceMap: sourceMap
+    });
     var astBody = ast.program.body;
-    var astBuilder = recast.types.builders;
     var importPaths = info.imports.map(function (imp) {
       return imp.path;
     });
 
-    // Replace "use strict".
     recast.visit(ast, {
-      visitExpressionStatement: function (path) {
-        if (path.get('expression', 'value').value === 'use strict') {
-          path.replace(null);
-        }
-        this.traverse(path);
-      }
-    });
-
-    // Replace imports.
-    recast.visit(ast, {
+      // Replace imports.
       visitCallExpression: function (path) {
         if (path.get('callee').value.name === 'require') {
           var importPath = path.get('arguments', 0).value.value;
@@ -119,6 +133,23 @@ module.exports = function (options) {
             var foundImportPathName = generateModuleName(foundImportPath);
             path.replace(astBuilder.identifier(foundImportPathName));
           }
+        }
+        this.traverse(path);
+      },
+
+      // Replace source map.
+      visitComment: function (path) {
+        var value = path.value.value;
+        if (value.indexOf(sourceMapToken) === 0) {
+          path.replace();
+        }
+        this.traverse(path);
+      },
+
+      // Replace "use strict".
+      visitExpressionStatement: function (path) {
+        if (path.get('expression', 'value').value === 'use strict') {
+          path.replace();
         }
         this.traverse(path);
       }
@@ -131,7 +162,7 @@ module.exports = function (options) {
     ];
 
     // Shim AMD to use CommonsJS.
-    if (isAmd) {
+    if (hasDefineCall(ast)) {
       shims.push(
         'var defineDependencies = ' + defineDependencies(info.imports) + ';',
         'var define = ' + defineReplacement + ';',
@@ -143,13 +174,18 @@ module.exports = function (options) {
     astBody.unshift.apply(astBody, recast.parse(shims.join('\n')).program.body);
 
     // Return CommonJS exports.
-    astBody.push(recast.parse('\n\nreturn module.exports;').program.body);
+    astBody.push.apply(astBody, recast.parse('\n\nreturn module.exports;').program.body);
 
-    // Wrap in IIFE bound to global.
+    // Generate IIFE for wrapping the compiled code.
     var wrapper = recast.parse(
+      // Comment to easily see which file it is.
       '// ' + makePathRelative(info.path) + '\n' +
+
+      // Assign to *hardly* global variable.
       generateModuleName(info.path) + ' = (function () {}).call(this);'
     );
+
+    // Wrap the code in the IIFE.
     var wrapperBody = wrapper.program.body;
     var wrapperFnBody = wrapperBody[0].expression.right.callee.object.body.body;
     astBody.forEach(function (item) {
@@ -161,7 +197,15 @@ module.exports = function (options) {
       }
     });
 
-    // Compile.
-    return recast.print(wrapper).code;
+    var parsed = recast.print(wrapper, {
+      sourceMapName: sourceMap && info.path
+    });
+    var code = parsed.code;
+
+    if (parsed.map) {
+      code += '\n\n//' + compileSourceMap(parsed.map);
+    }
+
+    return code;
   };
 };
