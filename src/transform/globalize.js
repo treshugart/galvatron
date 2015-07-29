@@ -153,12 +153,7 @@ module.exports = function () {
     var wrapperBody = wrapper.program.body;
     var wrapperFnBody = wrapperBody[0].expression.right.callee.object.body.body;
     astBody.forEach(function (item) {
-      // TODO Is there a better way to append all items no matter their type?
-      if (Array.isArray(item)) {
-        wrapperFnBody.push.apply(wrapperFnBody, item);
-      } else {
-        wrapperFnBody.push(item);
-      }
+      wrapperFnBody.push(item);
     });
 
     return {
