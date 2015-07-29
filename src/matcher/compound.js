@@ -1,13 +1,15 @@
 'use strict';
 
-module.exports = function ($fs, matchers) {
+module.exports = function (matchers) {
   matchers = matchers.map(function (matcher) {
-    return matcher($fs);
+    return matcher();
   });
 
-  return function (file, code) {
+  return function () {
+    var args = [].slice.call(arguments);
+    var that = this;
     return matchers.reduce(function (arr, matcher) {
-      return arr.concat(matcher(file, code));
+      return arr.concat(matcher.apply(that, args));
     }, []);
   };
 };

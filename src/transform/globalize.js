@@ -89,10 +89,10 @@ function hasDefineCall (ast) {
   return hasDefine;
 }
 
-function parseSourceMap (data) {
+function parseSourceMap (ast) {
   var sourceMap;
 
-  recast.visit(recast.parse(data), {
+  recast.visit(ast, {
     visitComment: function (path) {
       var value = path.value.value;
       if (value.indexOf(sourceMapToken) === 0) {
@@ -111,18 +111,14 @@ function compileSourceMap (map) {
 
 module.exports = function (options) {
   options = options || {};
-  return function (data, info) {
-    var sourceMap = parseSourceMap(data);
-    var ast = recast.parse(data, {
-      sourceFileName: info.path,
-      inputSourceMap: sourceMap
-    });
-    var astBody = ast.program.body;
-    var importPaths = info.imports.map(function (imp) {
+  return function (data) {
+    var sourceMap = parseSourceMap(data.ast);
+    var astBody = data.ast.program.body;
+    var importPaths = data.imports.map(function (imp) {
       return imp.path;
     });
 
-    recast.visit(ast, {
+    recast.visit(data.ast, {
       // Replace imports.
       visitCallExpression: function (path) {
         if (path.get('callee').value.name === 'require') {
@@ -162,9 +158,9 @@ module.exports = function (options) {
     ];
 
     // Shim AMD to use CommonsJS.
-    if (hasDefineCall(ast)) {
+    if (hasDefineCall(data.ast)) {
       shims.push(
-        'var defineDependencies = ' + defineDependencies(info.imports) + ';',
+        'var defineDependencies = ' + defineDependencies(data.imports) + ';',
         'var define = ' + defineReplacement + ';',
         'define.amd = true;'
       );
@@ -179,10 +175,10 @@ module.exports = function (options) {
     // Generate IIFE for wrapping the compiled code.
     var wrapper = recast.parse(
       // Comment to easily see which file it is.
-      '// ' + makePathRelative(info.path) + '\n' +
+      '// ' + makePathRelative(data.path) + '\n' +
 
       // Assign to *hardly* global variable.
-      generateModuleName(info.path) + ' = (function () {}).call(this);'
+      generateModuleName(data.path) + ' = (function () {}).call(this);'
     );
 
     // Wrap the code in the IIFE.
@@ -198,7 +194,7 @@ module.exports = function (options) {
     });
 
     var parsed = recast.print(wrapper, {
-      sourceMapName: sourceMap && info.path
+      sourceMapName: sourceMap && data.path
     });
     var code = parsed.code;
 

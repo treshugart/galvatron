@@ -2,21 +2,33 @@
 
 var expect = require('chai').expect;
 var mocha = require('mocha');
+var recast = require('recast');
 var transform = require('../src/transform/globalize');
 
-mocha.describe('transform/globalize', function () {
-  var globalize;
+function parse (data) {
+  var name = 'test.js';
+  return {
+    ast: recast.parse(data),
+    map: false,
+    name: name
+  };
+}
 
-  function format () {
-    return [].slice.call(arguments).join('\n');
-  }
+function print (data) {
+  return recast.print(data.ast, {
+    inputSourceMap: data.map
+  }).code;
+}
+
+mocha.describe('transform.globalize', function () {
+  var globalize;
 
   mocha.beforeEach(function () {
     globalize = transform();
   });
 
   mocha.it('Should not affect any code around the "use strict" statement', function () {
-    var data = format(
+    var data = parse([
       '',
       '"use strict";',
       '',
@@ -24,12 +36,13 @@ mocha.describe('transform/globalize', function () {
       '  "use strict";',
       '  return function () {};',
       '}'
-    );
-    var result = globalize(data, {
+    ].join('\n'));
+    var result = globalize({
+      ast: data.ast,
       imports: [],
       path: 'test.js'
     });
-    expect(result).to.equal(format(
+    expect(result).to.equal([
       '// test.js',
       '__1dd241c4cd3fd1dd89c570cee98b79dd = (function () {',
       '  var module = { exports: {} };',
@@ -41,25 +54,37 @@ mocha.describe('transform/globalize', function () {
       '',
       '  return module.exports;',
       '}).call(this);'
-    ));
+    ].join('\n'));
   });
 
   mocha.describe('amd', function () {
     mocha.it('define() as first thing in string', function () {
-      var data = 'define()';
-      var result = globalize(data, { imports: [], path: 'test.js' });
+      var data = parse('define()');
+      var result = globalize({
+        ast: data.ast,
+        imports: [],
+        path: 'test.js'
+      });
       expect(result).to.contain('var define = function defineReplacement');
     });
 
     mocha.it('define() anywhere in a string', function () {
-      var data = 'something && define()';
-      var result = globalize(data, { imports: [], path: 'test.js' });
+      var data = parse('something && define()');
+      var result = globalize({
+        ast: data.ast,
+        imports: [],
+        path: 'test.js'
+      });
       expect(result).to.contain('var define = function defineReplacement');
     });
 
     mocha.it('define() as part of another function call (i.e. somedefine())', function () {
-      var data = 'somedefine()';
-      var result = globalize(data, { imports: [], path: 'test.js' });
+      var data = parse('somedefine()');
+      var result = globalize({
+        ast: data.ast,
+        imports: [],
+        path: 'test.js'
+      });
       expect(result).to.not.contain('var define = function defineReplacement');
     });
   });
@@ -74,7 +99,8 @@ mocha.describe('transform/globalize', function () {
     ].join('\n\n');
 
     mocha.it('ignore if no source map is found', function () {
-      var output = globalize('"use strict"; var test = "test";', {
+      var output = globalize({
+        ast: parse('"use strict"; var test = "test";').ast,
         path: 'test.js',
         imports: []
       });
@@ -82,7 +108,8 @@ mocha.describe('transform/globalize', function () {
     });
 
     mocha.it('transform source map', function () {
-      var output = globalize(input, {
+      var output = globalize({
+        ast: parse(input).ast,
         path: 'test.js',
         imports: [{
           path: 'something',

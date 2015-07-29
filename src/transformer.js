@@ -1,28 +1,17 @@
 'use strict';
 
 function Transformer () {
-  this._transformers = {
-    pre: [],
-    post: []
-  };
+  this._transformers = [];
 }
 
 Transformer.prototype = {
-  pre: function (transformer) {
-    return this.transformer('pre', transformer, [].slice.call(arguments, 1));
+  transform: function (data) {
+    return this._transformers.map(function (transformer) {
+      return transformer(data);
+    });
   },
 
-  post: function (transformer) {
-    return this.transformer('post', transformer, [].slice.call(arguments, 1));
-  },
-
-  transform: function (type, data, info) {
-    return this._transformers[type].reduce(function (value, transformer) {
-      return transformer(value, info);
-    }, data);
-  },
-
-  transformer: function (type, transformer, args) {
+  transformer: function (transformer, args) {
     if (typeof transformer === 'string') {
       transformer = require('./transform/' + transformer).apply(null, args);
     }
@@ -31,7 +20,7 @@ Transformer.prototype = {
       throw new Error('Transformer must be a function.');
     }
 
-    this._transformers[type].push(transformer);
+    this._transformers.push(transformer);
     return this;
   }
 };

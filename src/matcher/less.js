@@ -2,13 +2,12 @@
 
 var regexToArray = require('../util/regex-to-array');
 
-module.exports = function ($fs) {
-  return function (file, code) {
+module.exports = function () {
+  return function (code) {
     return regexToArray(/^\s*@import\s*([^'"\s]*)\s*['"]([^'"]+)['"];?/gm, code).map(function (imp) {
       return {
-        path: $fs.ext($fs.resolve(imp[2], file), 'less', ['css', 'less']),
-        type: imp[1],
-        value: imp[2]
+        path: imp[2],
+        type: imp[1]
       };
     });
   };

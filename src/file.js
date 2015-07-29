@@ -1,6 +1,7 @@
 'use strict';
 
 var nodeFs = require('fs');
+var recast = require('recast');
 var cache = {};
 
 function File ($matcher, $transformer, file) {
@@ -15,37 +16,40 @@ function File ($matcher, $transformer, file) {
 }
 
 File.prototype = {
+  get ast () {
+    return this._ast || (this._ast = recast.parse(this.code));
+  },
+
   get code () {
     return this._code || (this._code = nodeFs.readFileSync(this.path).toString());
   },
 
   get imports () {
-    return this._imports || (this._imports = this._matcher(this.path, this.pre));
+    return this._imports || (this._imports = this._matcher(this.code));
   },
 
   get path () {
     return this._file;
   },
 
-  get post () {
-    return this._post || (this._post = this._transformer.transform('post', this.pre, {
-      imports: this.imports,
-      path: this.path
-    }));
-  },
-
-  get pre () {
-    return this._pre || (this._pre = this._transformer.transform('pre', this.code, {
-      path: this.path
-    }));
+  get transformed () {
+    if (!this._transformed) {
+      this._transformed = this._transformer.transform({
+        ast: this._ast,
+        imports: this.imports,
+        map: null,
+        path: this.path
+      });
+    }
+    return this._transformed;
   },
 
   expire: function () {
     delete cache[this.path];
+    delete this._ast;
     delete this._code;
     delete this._imports;
-    delete this._post;
-    delete this._pre;
+    delete this._transformed;
     return this;
   }
 };
