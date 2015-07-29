@@ -1,8 +1,7 @@
 'use strict';
 
 var detective = require('detective-es6');
-var debug = require('debug');
-var log = debug('galvatron:matcher:es6')
+var log = require('debug')('galvatron:matcher:es6');
 
 module.exports = function ($fs) {
   return function (file, code) {
