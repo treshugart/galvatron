@@ -5,9 +5,6 @@ var recast = require('recast');
 
 module.exports = function (options) {
   return function (data) {
-    var out = babel.transform(recast.print(data.ast).code, options);
-    data.ast = out.ast;
-    data.map = out.map;
-    return data;
+    return babel.transform(recast.print(data.ast).code, options);
   };
 };

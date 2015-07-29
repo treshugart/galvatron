@@ -7,7 +7,12 @@ function Transformer () {
 Transformer.prototype = {
   transform: function (data) {
     return this._transformers.map(function (transformer) {
-      return transformer(data);
+      var res = transformer(data);
+      return {
+        ast: res.ast,
+        map: res.map,
+        path: data.path
+      };
     });
   },
 
