@@ -10,6 +10,7 @@ Transformer.prototype = {
       var res = transformer(data);
       return {
         ast: res.ast,
+        imports: data.imports,
         map: res.map,
         path: data.path
       };
