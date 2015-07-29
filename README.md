@@ -1,6 +1,6 @@
 # Galvatron
 
-Library for tracing, transforming and concatenating any type of import in any type of source file using pre and post transforms. It currently has built-in support for:
+Library for tracing, transforming and bundling any type of source file and its dependencies. It currently has built-in support for:
 
 1. ES6
 2. AMD
