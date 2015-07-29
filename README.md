@@ -38,17 +38,24 @@ var compiled = galvatron.bundle([
 
 ### Dependency Resolution
 
-Dependencies are resolved in a couple different ways depending on the path that is given. First off, the files you specify to get traced and concatenated are resolved relative to the current working directory. Internally Galvatron will inspect the path and determine if the path is:
+Dependency resolution follows the same rules as Node's `require()`. However, it not only applies them to `node_modules` folders but also to `bower_components` folders. This means you can do things like:
 
-1. A module name.
-2. An absolute path.
-3. A relative path.
+```js
+// Will look in bower_components and node_modules *.json files for a "main"
+// entry or "jquery/index.js".
+import $ from 'jquery';
 
-Module names are resolved in several different ways.
+// Will look in bower_components and node_modules for "jquery/src/jquery.js".
+import $ from 'jquery/src/jquery';
 
-It will go up the directory tree - starting with the directory which the `require()` call originated in - and look for a `bower_components` folder and a `node_modules` folder, in that order. It first looks to see if there is a `bower.json` or a `package.json` depending on the package manager and if it contains a `main` definition, it will use that. If it doesn't find a main, it will look for an `index.js` or a file with the same name as the module but with a `js` extension in the component root, `src`, `lib` or `dist` directories (in that order).
+// Will look for "./bower_components/jquery/src/jquery.js".
+import $ from './bower_components/jquery/src/jquery';
 
-You can also use module names instead of paths when specifying files to Galvatron:
+// Will look for "./node_modules/jquery/src/jquery.js".
+import $ from './node_modules/jquery/src/jquery';
+```
+
+The same semantics are applied to any path you give to Galvatron. For example, you can add things to your bundle based on their module name:
 
 ```js
 var underscoreAndDepenendies = galvatron.bundle('underscore').compile();
@@ -56,13 +63,12 @@ var underscoreAndDepenendies = galvatron.bundle('underscore').compile();
 
 ### Transforms
 
-Galvatron has a notion of both `pre` and `post` transorms. The `pre` transforms happen prior to tracing dependencies. This means that if you need to transform your code prior to tracing it for its dependencies, then you can do so. The `post` transforms happen after tracing and are intended to transform your source before it is concatenated.
+Galvatron has a notion of both `pre` and `post` transforms. The `pre` transforms happen prior to tracing dependencies. This means that if you need to transform your code prior to tracing it for its dependencies, then you can do so. The `post` transforms happen after tracing and are intended to transform your source before it is concatenated.
 
-There are three built-in transformers:
+There are two built-in transformers:
 
 1. `babel`
 2. `globalize`
-3. `unamd`
 
 Built-in transformers can be specified by their name:
 
@@ -93,10 +99,6 @@ The great part about this is that there's no need for a shim, so code bloat is k
 
 This is especially useful when you're writing an open source library and you've got zero control over what your consumer is including with your library or framework. If you use Browserify you have to be careful because their shim will use whatever `require` is on the page if it's there before the shim. This means that it could potentially break the world. The solution according to an [open issue](https://github.com/substack/node-browserify/issues/790) is to change the AMD code. This doesn't help if you don't have control over other code on the page.
 
-#### UnAMD
-
-The `unamd` transform will no-op any AMD code that is traced by Galvatron. This might change in the future to only no-op anonymous modules. This is useful when you don't want to put your code through `r.js` just to make the `define` calls happy. If you're using CommonJS, you've probably got no use for them anyways.
-
 #### Custom Transformers
 
 You can also write custom transformers. A transformer is simply a function that takes two arguments.
@@ -118,8 +120,7 @@ As a `pre` transformer:
 As a `post` transformer:
 
 - `path` The file path.
-- `imports` Dependency paths as they are defined in the import statement (`import`, `require()`, etc.).
-- `dependencies` Absolute dependency paths resolved from their respective import path.
+- `imports` An array of objects containing the full `path` to, and exact `value` of, the import.
 
 ### Streams
 
@@ -140,6 +141,18 @@ You can create watch streams, too:
 var bundle = galvatron.bundle('src/*.js');
 gulp.src(bundle.files)
   .pipe(bundle.watch())
+  .pipe(bundle.stream())
+  .pipe(gulp.dest('dist'));
+```
+
+And if you want to conditionally watch for changes, you can use the `watchIf(condition)` method instead of just `watch()` which may seem like a small amount of syntactic sugar, but it can really clean up your logic:
+
+```js
+
+var bundle = galvatron.bundle('src/*.js');
+var shouldWatchForChanges = true;
+gulp.src(bundle.files)
+  .pipe(bundle.watchIf(shouldWatchForChanges))
   .pipe(bundle.stream())
   .pipe(gulp.dest('dist'));
 ```
