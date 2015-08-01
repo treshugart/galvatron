@@ -139,7 +139,7 @@ Bundle.prototype = {
       compiledMap.addFile({
         source: codeAndMap
       }, {
-        line: lastLine
+        line: lastLine + 8
       });
       lastLine += comp.code.split('\n').length;
     });
