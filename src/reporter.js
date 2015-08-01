@@ -1,6 +1,7 @@
+'use strict';
+
 function Reporter ($events) {
   this._events = $events;
-  this._reporters = [];
 }
 
 Reporter.prototype = {
@@ -8,7 +9,6 @@ Reporter.prototype = {
     if (typeof reporter === 'string') {
       reporter = require('./reporter/' + reporter);
     }
-
     reporter(this._events);
     return this;
   }

@@ -29,7 +29,17 @@ Tracer.prototype = {
     files = files || [];
     traced = traced || [];
     depth = depth || 0;
-    file = this._file(this._fs.resolve(file, parent));
+
+    try {
+      file = this._file(this._fs.resolve(file, parent));
+    } catch (e) {
+      var errFiles = [].slice.call(traced);
+      errFiles.unshift('');
+      errFiles.push(parent);
+      throw new Error('tracing:' + errFiles.map(function (errFile) {
+        return errFile;
+      }).join('\n  - '));
+    }
 
     this._events.emit('trace', file.path, depth);
     file.imports.forEach(function (imp) {

@@ -4,15 +4,20 @@ var nodeFs = require('fs');
 var recast = require('recast');
 var cache = {};
 
-function File ($matcher, $transformer, file) {
+function File ($fs, $matcher, $transformer, file) {
   if (cache[file]) {
     return cache[file];
+  }
+
+  if (!nodeFs.existsSync(file)) {
+    throw new Error('Unable to open file: ' + file);
   }
 
   cache[file] = this;
   this._matcher = $matcher;
   this._transformer = $transformer;
   this._file = file;
+  this._fs = $fs;
 }
 
 File.prototype = {
@@ -27,7 +32,7 @@ File.prototype = {
   },
 
   get imports () {
-    return this._imports || (this._imports = this._matcher(this.code));
+    return this._imports || (this._imports = this._matcher(this));
   },
 
   get path () {
@@ -36,12 +41,7 @@ File.prototype = {
 
   get transformed () {
     if (!this._transformed) {
-      this._transformed = this._transformer.transform({
-        ast: this.ast,
-        imports: this.imports,
-        map: recast.print(this.ast, { sourceMapName: this.path }),
-        path: this.path
-      });
+      this._transformed = this._transformer.transform(this);
     }
     return this._transformed;
   },

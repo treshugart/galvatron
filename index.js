@@ -22,6 +22,4 @@ var dependencies = {
   Watcher: Watcher
 };
 
-module.exports = ubercod(function () {
-  return ubercod(dependencies);
-}, dependencies);
+module.exports = ubercod(dependencies);

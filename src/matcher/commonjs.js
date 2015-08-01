@@ -2,11 +2,12 @@
 
 var detective = require('detective-cjs');
 
-module.exports = function () {
-  return function (code) {
-    return detective(code).map(function (imp) {
+module.exports = function ($fs) {
+  return function (file) {
+    return detective(file.code).map(function (imp) {
       return {
-        path: imp
+        code: imp,
+        path: $fs.ext($fs.resolve(imp, file.path), 'js')
       };
     });
   };

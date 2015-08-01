@@ -5,9 +5,11 @@ var recast = require('recast');
 
 module.exports = function () {
   return function (data) {
-    return babel.transform(recast.print(data.ast).code, {
+    return babel.transform(data.code, {
+      inputSourceMap: data.map,
+      sourceFileName: data.path,
       sourceMaps: true,
-      inputSourceMap: data.map
+      sourceMapTarget: data.path
     });
   };
 };

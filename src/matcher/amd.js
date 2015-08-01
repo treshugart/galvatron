@@ -2,11 +2,14 @@
 
 var detective = require('detective-amd');
 
-module.exports = function () {
-  return function (code) {
-    return detective(code).map(function (imp) {
+module.exports = function ($fs) {
+  return function (file) {
+    return detective(file.code).filter(function (imp) {
+      return ['exports', 'module', 'require'].indexOf(imp) === -1;
+    }).map(function (imp) {
       return {
-        path: imp
+        code: imp,
+        path: $fs.ext($fs.resolve(imp, file.path), 'js')
       };
     });
   };

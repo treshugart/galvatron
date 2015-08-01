@@ -1,23 +1,37 @@
 'use strict';
 
+var recast = require('recast');
+
 function Transformer () {
   this._transformers = [];
 }
 
 Transformer.prototype = {
-  transform: function (data) {
-    return this._transformers.map(function (transformer) {
-      var res = transformer(data);
+  transform: function (file) {
+    var parsed = recast.parse(file.code, {
+      sourceFileName: file.path
+    });
+    var transformed = this._transformers.reduce(function (value, transformer) {
+      var res = transformer(value);
       return {
         ast: res.ast,
-        imports: data.imports,
+        code: recast.print(res.ast).code,
+        imports: file.imports,
         map: res.map,
-        path: data.path
+        path: file.path
       };
+    }, {
+      ast: parsed,
+      code: recast.print(parsed).code,
+      imports: file.imports,
+      map: null,
+      path: file.path
     });
+
+    return transformed;
   },
 
-  transformer: function (transformer, args) {
+  add: function (transformer, args) {
     if (typeof transformer === 'string') {
       transformer = require('./transform/' + transformer).apply(null, args);
     }

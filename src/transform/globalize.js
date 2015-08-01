@@ -40,7 +40,6 @@ function defineDependencies (imports) {
 
   keyVals.unshift('"exports": exports');
   keyVals.unshift('"module": module');
-  keyVals.unshift('"require": require');
   code = '\n' + indent(keyVals.join(',\n')) + '\n';
   return '{' + code + '}';
 }
@@ -79,7 +78,7 @@ function hasDefineCall (ast) {
   recast.visit(ast, {
     visitCallExpression: function (node) {
       var callee = node.value.callee;
-      if (callee.type === 'Identifier' && callee.name === 'define') {
+      if (callee.type === 'Identifier' && callee.name === 'define' && node.value.arguments.length) {
         hasDefine = true;
         return false;
       }
@@ -91,19 +90,21 @@ function hasDefineCall (ast) {
 
 module.exports = function () {
   return function (data) {
-    var astBody = data.ast.program.body;
-
-    // TODO Hash these based on original content.
+    var ast = data.ast;
+    var astBody = ast.program.body;
+    var importCodes = data.imports.map(function (imp) {
+      return imp.code;
+    });
     var importPaths = data.imports.map(function (imp) {
       return imp.path;
     });
 
-    recast.visit(data.ast, {
+    recast.visit(ast, {
       // Replace imports.
       visitCallExpression: function (path) {
         if (path.get('callee').value.name === 'require') {
           var importPath = path.get('arguments', 0).value.value;
-          var importPathIndex = importPaths.indexOf(importPath);
+          var importPathIndex = importCodes.indexOf(importPath);
           if (importPathIndex > -1) {
             var foundImportPath = importPaths[importPathIndex];
             var foundImportPathName = generateModuleName(foundImportPath);
@@ -129,7 +130,7 @@ module.exports = function () {
     ];
 
     // Shim AMD to use CommonsJS.
-    if (hasDefineCall(data.ast)) {
+    if (hasDefineCall(ast)) {
       shims.push(
         'var defineDependencies = ' + defineDependencies(importPaths) + ';',
         'var define = ' + defineReplacement + ';',
@@ -153,10 +154,9 @@ module.exports = function () {
     );
 
     // Wrap the code in the IIFE.
-    var wrapperBody = wrapper.program.body;
-    var wrapperFnBody = wrapperBody[0].expression.right.callee.object.body.body;
+    var wrapperBody = wrapper.program.body[0].expression.right.callee.object.body.body;
     astBody.forEach(function (item) {
-      wrapperFnBody.push(item);
+      wrapperBody.push(item);
     });
 
     return {

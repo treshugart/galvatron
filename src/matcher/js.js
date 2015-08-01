@@ -5,10 +5,10 @@ var commonJs = require('./commonjs');
 var compound = require('./compound');
 var es6 = require('./es6');
 
-module.exports = function () {
+module.exports = function ($fs) {
   return compound([
-    amd,
-    commonJs,
-    es6
+    amd($fs),
+    commonJs($fs),
+    es6($fs)
   ]);
 };

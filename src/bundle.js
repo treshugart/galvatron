@@ -1,5 +1,7 @@
 'use strict';
 
+var combineSourceMap = require('combine-source-map');
+var convertSourceMap = require('convert-source-map');
 var extend = require('extend');
 var fs = require('fs');
 var glob = require('./glob');
@@ -14,13 +16,14 @@ function filesToPaths (files) {
   });
 }
 
-function Bundle ($events, $file, $tracer, $watcher, paths, options) {
+function Bundle ($events, $file, $fs, $tracer, $watcher, paths, options) {
   this._options = extend({
     common: false,
     joiner: '\n\n'
   }, options);
   this._events = $events;
   this._file = $file;
+  this._fs = $fs;
   this._tracer = $tracer;
   this._watcher = $watcher;
   this.files = glob(paths);
@@ -89,7 +92,6 @@ Bundle.prototype = {
 
   compile: function (paths) {
     var that = this;
-    var bundle = '';
     var bundled = [];
     var common = this.common;
     var files = this.files;
@@ -123,23 +125,31 @@ Bundle.prototype = {
       bundled.push(file);
     });
 
-    // Compile each file in the bundle.
-    bundle = traced.map(function (file, index) {
-      that._events.emit('compile', file, index, traced, bundled);
-      return that._file(file).post;
+    var compiled = [];
+    var compiledMap = combineSourceMap.create();
+    var lastLine = 0;
+
+    traced.forEach(function (path, index) {
+      var file = that._file(path);
+      var comp = file.transformed;
+      var codeAndMap = comp.code + '\n\n' + convertSourceMap.fromObject(comp.map).toComment();
+
+      that._events.emit('compile', path, index, traced, bundled);
+      compiled.push(comp.code);
+      compiledMap.addFile({
+        source: codeAndMap
+      }, {
+        line: lastLine
+      });
+      lastLine += comp.code.split('\n').length;
     });
 
-    // Concatenate.
-    bundle = bundle.join(this._options.joiner);
-
-    this._events.emit('bundle', bundle, bundled);
-
-    return bundle;
+    return compiled.join('\n\n') + '\n\n' + compiledMap.comment();
   },
 
   compileOne: function (file) {
     file = this._file(file);
-    return this.all.indexOf(file.path) === -1 ? '' : file.post;
+    return this.all.indexOf(file.path) === -1 ? '' : file.transformed.code;
   },
 
   stream: function () {
