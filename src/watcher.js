@@ -48,10 +48,6 @@ Watcher.prototype = {
           });
         }
       });
-
-      subWatcher.on('error', function (error) {
-        that._events.emit('error', error, bundleFile);
-      });
     });
 
     bundle.files.forEach(function (file) {
@@ -65,6 +61,10 @@ Watcher.prototype = {
     watcher.on('close', function () {
       subWatcher.unwatch();
       subWatcher.close();
+    });
+
+    subWatcher.on('error', function (error) {
+      that._events.emit('error', error);
     });
 
     return watcher;
