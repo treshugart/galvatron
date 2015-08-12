@@ -50,10 +50,6 @@ Watcher.prototype = {
       });
     });
 
-    bundle.files.forEach(function (file) {
-      watcher[file] = true;
-    });
-
     watcher.on('error', function (error) {
       that._events.emit('error', error);
     });
