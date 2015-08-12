@@ -164,10 +164,6 @@ Bundle.prototype = {
     return this._watcher.watch(this, callback);
   },
 
-  watchIf: function (condition, callback) {
-    return condition ? this.watch(callback) : through();
-  },
-
   _commonDestination: function () {
     var common;
     var commonOpt = this._options.common;
