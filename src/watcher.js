@@ -2,8 +2,6 @@
 
 var fs = require('fs');
 var gulpWatch = require('gulp-watch');
-
-var streams = {};
 var watched = {};
 
 function Watcher ($events, $file, $tracer) {
@@ -16,62 +14,57 @@ Watcher.prototype = {
   watch: function (bundle, callback) {
     var that = this;
     var watcher = gulpWatch(bundle.files, function (file) {
-      that._file(file.path).expire();
+      file = file.path;
+      that._file(file).expire();
 
-      if (watched[file.path]) {
+      if (watched[file]) {
         return;
       }
 
-      watched[file.path] = true;
-      that._events.emit('watch', file.path);
-      bundle.all.forEach(function (bundleFile) {
-        // Individual watchers don't need to be re-created.
-        if (streams[bundleFile]) {
-          return;
-        }
+      watched[file] = {};
+      that._events.emit('watch', file);
+    });
 
-        // Create an individual watcher for this file.
-        streams[bundleFile] = gulpWatch(bundleFile, function (bundleFileVinyl) {
-          bundleFile = bundleFileVinyl.path;
+    var subWatcher = gulpWatch(bundle.all, function (bundleFile) {
+      bundleFile = bundleFile.path;
 
-          // If we don't uncache it then the file won't change and no new files
-          // will be picked up.
-          that._file(bundleFile).expire();
+      // If we don't uncache it then the file won't change and no new files
+      // will be picked up.
+      that._file(bundleFile).expire();
 
-          // We actually have to write the main file to trigger a change.
-          bundle.destinations(bundleFile).forEach(function (mainFile) {
-            // If a bundle file was updated, then we don't need to force update
-            // it. We just notify that it's been updated.
-            if (watched[bundleFile]) {
-              that._events.emit('update.main', bundleFile);
-            } else {
-              // Force update the main file
-              fs.readFile(mainFile, function (err, buf) {
-                fs.writeFile(mainFile, buf.toString(), function () {
-                  that._events.emit('update', bundleFile, mainFile);
-                  callback && callback(bundleFile, mainFile);
-                });
-              });
-            }
+      // We actually have to write the main file to trigger a change.
+      bundle.destinations(bundleFile).forEach(function (mainFile) {
+        // If a bundle file was updated, then we don't need to force update
+        // it. We just notify that it's been updated.
+        if (watched[bundleFile]) {
+          that._events.emit('update.main', bundleFile);
+        } else {
+          // Force update the main file
+          fs.readFile(mainFile, function (err, buf) {
+            fs.writeFile(mainFile, buf.toString(), function () {
+              that._events.emit('update', bundleFile, mainFile);
+              callback && callback(bundleFile, mainFile);
+            });
           });
-        });
+        }
+      });
 
-        streams[bundleFile].on('error', function (error) {
-          that._events.emit('error', error, bundleFile);
-        });
+      subWatcher.on('error', function (error) {
+        that._events.emit('error', error, bundleFile);
       });
     });
 
-    watcher.on('close', function () {
-      Object.keys(streams).forEach(function (name) {
-        streams[name].unwatch();
-        streams[name].close();
-        delete streams[name];
-      });
+    bundle.files.forEach(function (file) {
+      watcher[file] = true;
     });
 
     watcher.on('error', function (error) {
       that._events.emit('error', error);
+    });
+
+    watcher.on('close', function () {
+      subWatcher.unwatch();
+      subWatcher.close();
     });
 
     return watcher;
