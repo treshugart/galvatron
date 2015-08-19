@@ -47,6 +47,7 @@
     "estraverse": "^4.1.0",
     "extend": "^2.0.0",
     "glob": "^4.4.1",
+    "gulp-if": "^1.2.5",
     "gulp-watch": "^4.1.1",
     "map-stream": "0.0.5",
     "minimatch": "^2.0.1",

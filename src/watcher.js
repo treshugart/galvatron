@@ -1,7 +1,7 @@
 'use strict';
 
 var fs = require('fs');
-var gulpWatch = require('gulp-watch');
+var utilWatch = require('./util/watch');
 var watched = {};
 
 function Watcher ($events, $file, $tracer) {
@@ -13,7 +13,7 @@ function Watcher ($events, $file, $tracer) {
 Watcher.prototype = {
   watch: function (bundle, callback) {
     var that = this;
-    var watcher = gulpWatch(bundle.files, function (file) {
+    var watcher = utilWatch(bundle.files, function (file) {
       file = file.path;
       that._file(file).expire();
 
@@ -25,7 +25,7 @@ Watcher.prototype = {
       that._events.emit('watch', file);
     });
 
-    var subWatcher = gulpWatch(bundle.all, function (bundleFile) {
+    var subWatcher = utilWatch(bundle.all, function (bundleFile) {
       bundleFile = bundleFile.path;
 
       // If we don't uncache it then the file won't change and no new files

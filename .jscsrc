@@ -47,7 +47,7 @@
         "!"
     ],
     "disallowTrailingWhitespace": true,
-    "maximumLineLength": false,
+    "maximumLineLength": 100000,
     "requireDotNotation": true,
     "disallowSpaceBeforePostfixUnaryOperators": [
         "++",
@@ -125,7 +125,7 @@
         "beforeOpeningRoundBrace": true,
         "beforeOpeningCurlyBrace": true
     },
-    "validateIndentation": 4,
+    "validateIndentation": 2,
     "validateLineBreaks": "LF",
     "validateQuoteMarks": {
         "mark": "'",
