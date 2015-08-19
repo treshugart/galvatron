@@ -3,9 +3,9 @@
 var extend = require('extend');
 var fs = require('fs');
 var glob = require('./util/glob');
-var gulpIf = require('gulp-if');
 var mapStream = require('map-stream');
 var minimatch = require('minimatch');
+var through = require('through');
 var vinylTransform = require('vinyl-transform');
 
 function filesToPaths (files) {
@@ -164,8 +164,8 @@ Bundle.prototype = {
     return this._watcher.watch(this, callback);
   },
 
-  watchIf: function (condition, callback, otherwise) {
-    return gulpIf(condition, this.watch(callback), otherwise);
+  watchIf: function (condition, callback) {
+    return condition ? this.watch(callback) : through();
   },
 
   _commonDestination: function () {
