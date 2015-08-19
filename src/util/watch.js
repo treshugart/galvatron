@@ -1,6 +1,6 @@
 'use strict';
 
-var glob = require('glob');
+var glob = require('./glob');
 var gulpWatch = require('gulp-watch');
 
 // Wraps the stream's pipe() method so that it passes on the "continue" event

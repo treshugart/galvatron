@@ -1,6 +1,6 @@
 'use strict';
 
-var glob = require('util/glob');
+var glob = require('./util/glob');
 
 function Tracer ($events, $file, $fs) {
   this._events = $events;

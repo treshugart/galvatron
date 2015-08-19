@@ -2,7 +2,7 @@
 
 var extend = require('extend');
 var fs = require('fs');
-var glob = require('util/glob');
+var glob = require('./util/glob');
 var gulpIf = require('gulp-if');
 var mapStream = require('map-stream');
 var minimatch = require('minimatch');
