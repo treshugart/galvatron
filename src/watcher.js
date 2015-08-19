@@ -63,7 +63,7 @@ Watcher.prototype = {
       that._events.emit('error', error);
     });
 
-    return watcher;
+    return watcher.pipe(subWatcher);
   }
 };
 
