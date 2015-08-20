@@ -20,7 +20,12 @@ File.prototype = {
   },
 
   get imports () {
-    return this._imports || (this._imports = this._matcher(this.path, this.pre));
+    try {
+      return this._imports || (this._imports = this._matcher(this.path, this.pre));
+    }
+    catch (e) {
+      throw new Error('Error in "' + this.path + '": ' + e.message);
+    }
   },
 
   get path () {
