@@ -1,5 +1,6 @@
 'use strict';
 
+var debug = require('debug')('galvatron:file');
 var nodeFs = require('fs');
 var cache = {};
 
@@ -16,16 +17,25 @@ function File ($matcher, $transformer, file) {
 
 File.prototype = {
   get code () {
+    debug('reading', this.path);
     return this._code || (this._code = nodeFs.readFileSync(this.path).toString());
   },
 
   get imports () {
-    try {
-      return this._imports || (this._imports = this._matcher(this.path, this.pre));
+    var that = this;
+
+    debug('parsing imports', this.path);
+
+    if (!this._imports) {
+      this._imports = this._matcher(this.path, this.pre);
+      this._imports.forEach(function (imp) {
+        if (!nodeFs.existsSync(imp.path) || !nodeFs.statSync(imp.path).isFile()) {
+          throw new Error('Non-existent file "' + imp.path + '" being imported from "' + that.path + '"');
+        }
+      });
     }
-    catch (e) {
-      throw new Error('Error in "' + this.path + '": ' + e.message);
-    }
+
+    return this._imports;
   },
 
   get path () {
@@ -33,6 +43,7 @@ File.prototype = {
   },
 
   get post () {
+    debug('transforming', this.path);
     return this._post || (this._post = this._transformer.transform('post', this.pre, {
       imports: this.imports,
       path: this.path
