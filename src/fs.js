@@ -35,76 +35,6 @@ Fs.prototype = {
     return this;
   },
 
-  module: function (request, relativeTo) {
-    var mod;
-    if (request.indexOf(path.sep) !== -1) {
-      // the request is a deep lookup like `require('foo/bar/baz')`
-      // use 'foo' as the module and save the rest ('bar/baz')
-      // for later.
-      var split = request.split(path.sep);
-      mod = split.shift();
-      request = split.join(path.sep);
-    } else {
-      mod = request;
-      request = '';
-    }
-
-    relativeTo = relativeTo ? path.dirname(relativeTo) : process.cwd();
-    var dirs = relativeTo.split(path.sep);
-    var foundFile;
-
-    dirs:
-    for (var a = 0; a < dirs.length; a++) {
-      lookups:
-      for (var b in this.lookups) {
-        if (!this.lookups.hasOwnProperty(b)) {
-          continue lookups;
-        }
-
-        var basePath = path.join(relativeTo, new Array(a).join('../'));
-        var modulePath = path.join(basePath, b, mod);
-        var moduleFile = path.join(modulePath, request);
-        var indexFile = path.join(basePath, 'index.js');
-        var packageFile = path.join(modulePath, this.lookups[b]);
-
-        if (mod[0] !== '.' && request && fs.existsSync(moduleFile)) {
-          // this is a deep lookup into the package,
-          // resolve with that if the directory exists
-          foundFile = moduleFile
-          break dirs;
-        }
-
-        if (fs.existsSync(indexFile)) {
-          foundFile = indexFile;
-          break dirs;
-        }
-
-        if (fs.existsSync(packageFile)) {
-          var pkg = require(packageFile);
-
-          if (pkg.main) {
-            // otherwise, return the module's main entry point.
-            var pkgMain = path.join(modulePath, pkg.main);
-
-            if (fs.existsSync(pkgMain)) {
-              foundFile = pkgMain;
-              break dirs;
-            }
-
-            pkgMain = pkgMain + '.js';
-
-            if (fs.existsSync(pkgMain)) {
-              foundFile = pkgMain;
-              break dirs;
-            }
-          }
-        }
-      }
-    }
-
-    return foundFile;
-  },
-
   expand: function (file) {
     if (this._map[file]) {
       // return early for an exact match
@@ -122,6 +52,58 @@ Fs.prototype = {
     }
 
     return file;
+  },
+
+  // Resolves a module file based on the following semantics an in order:
+  // - If a relative path is given:
+  //   - ./path/to/module-name/index.js
+  //   - ./path/to/module-name.js
+  // - If only a module name is given:
+  //   - [module-folder]/[module-name]/[module-file].json "main"
+  //   - [module-folder]/[module-name]/index.js
+  // - If a module name and path is given:
+  //   - [module-folder]/[module-name]/path/index.js
+  //   - [module-folder]/[module-name]/path.js
+  module: function (file, relativeTo) {
+    var fileIndex;
+
+    if (path.isAbsolute(file)) {
+      return;
+    }
+
+    if (file[0] === '.') {
+      file = this.relative(file, relativeTo) + '.js';
+      fileIndex = path.join(file, 'index.js');
+      return fs.existsSync(fileIndex) ? fileIndex : file;
+    }
+
+    var currentDir = relativeTo ? path.dirname(relativeTo) : process.cwd();
+    var dirs = currentDir.split(path.sep);
+    var isModuleNameOnly = file.indexOf(path.sep) === -1;
+
+    for (var a = 0; a < dirs.length; a++) {
+      for (var lookupPath in this.lookups) {
+        var lookupBase = path.join(currentDir, new Array(a).join('../'));
+        var lookupFile = path.join(lookupBase, lookupPath, file, this.lookups[lookupPath]);
+        var lookupModule = path.join(lookupBase, lookupPath, file + '.js');
+        var lookupModuleIndex = path.join(lookupBase, lookupPath, file, 'index.js');
+
+        if (isModuleNameOnly && fs.existsSync(lookupFile)) {
+          var json = require(lookupFile);
+          if (json.main) {
+            return this.resolve(json.main, lookupFile);
+          }
+        }
+
+        if (fs.existsSync(lookupModuleIndex)) {
+          return lookupModuleIndex;
+        }
+
+        if (fs.existsSync(lookupModule)) {
+          return lookupModule;
+        }
+      }
+    }
   },
 
   resolve: function (file, relativeTo) {
