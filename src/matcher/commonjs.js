@@ -9,11 +9,13 @@ module.exports = function ($fs) {
       return [];
     }
 
-    return detective(code).map(function (imp) {
-      log('resolving commonjs dependency', imp, 'from', file);
+    return detective(code).map(function (impValue) {
+      var cwd = process.cwd() + '/';
+      var impPath = $fs.ext($fs.resolve(impValue, file), 'js', ['js', 'json']);
+      log('import', file.replace(cwd, ''), '->', impPath.replace(cwd, ''));
       return {
-        path: $fs.ext($fs.resolve(imp, file), 'js', ['js', 'json']),
-        value: imp
+        path: impPath,
+        value: impValue
       };
     });
   };
