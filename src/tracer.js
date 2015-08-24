@@ -1,52 +1,69 @@
 'use strict';
 
-var glob = require('./util/glob');
+var debug = require('debug')('galvatron:file');
+var nodeFs = require('fs');
+var cache = {};
 
-function Tracer ($events, $file, $fs) {
-  this._events = $events;
-  this._file = $file;
-  this._fs = $fs;
+function File ($matcher, $transformer, file) {
+  if (cache[file]) {
+    return cache[file];
+  }
+
+  cache[file] = this;
+  this._matcher = $matcher;
+  this._transformer = $transformer;
+  this._file = file;
 }
 
-Tracer.prototype = {
-  trace: function (paths) {
-    var that = this;
-    var traced = [];
-
-    glob(paths).forEach(function (file) {
-      that._traceRecursive(file).forEach(function (dependency) {
-        traced.push(dependency);
-      });
-    });
-
-    return traced;
+File.prototype = {
+  get code () {
+    debug('reading', this.path);
+    return this._code || (this._code = nodeFs.readFileSync(this.path).toString());
   },
 
-  _traceRecursive: function (file, parent, files, traced, depth) {
+  get imports () {
     var that = this;
 
-    parent = parent || null;
-    files = files || [];
-    traced = traced || [];
-    depth = depth || 0;
-    file = this._file(this._fs.resolve(file, parent));
+    debug('parsing imports', this.path);
 
-    this._events.emit('trace', file.path, depth);
-    file.imports.forEach(function (imp) {
-      // If there are circular references, this will cause recursion. We ignore
-      // recursion since all we care about is a list of dependencies.
-      if (traced.indexOf(imp.path) === -1) {
-        traced.push(imp.path);
-        that._traceRecursive(imp.path, file.path, files, traced, depth + 1);
-      }
-    });
-
-    if (files.indexOf(file) === -1) {
-      files.push(file);
+    if (!this._imports) {
+      this._imports = this._matcher(this.path, this.pre);
+      this._imports.forEach(function (imp) {
+        if (!nodeFs.existsSync(imp.path) || !nodeFs.statSync(imp.path).isFile()) {
+          throw new Error('Non-existent file "' + imp.path + '" being imported from "' + that.path + '"');
+        }
+      });
     }
 
-    return files;
+    return this._imports;
+  },
+
+  get path () {
+    return this._file;
+  },
+
+  get post () {
+    debug('transforming', this.path);
+    return this._post || (this._post = this._transformer.transform('post', this.pre, {
+      imports: this.imports,
+      path: this.path
+    }));
+  },
+
+  get pre () {
+    return this._pre || (this._pre = this._transformer.transform('pre', this.code, {
+      path: this.path
+    }));
+  },
+
+  expire: function () {
+    delete cache[this.path];
+    delete this._code;
+    delete this._imports;
+    delete this._post;
+    delete this._pre;
+    return this;
   }
 };
 
-module.exports = Tracer;
+module.exports = File;
