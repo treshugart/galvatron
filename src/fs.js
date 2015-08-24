@@ -67,7 +67,7 @@ Fs.prototype = {
         var indexFile = path.join(basePath, 'index.js');
         var packageFile = path.join(modulePath, this.lookups[b]);
 
-        if (request && fs.existsSync(moduleFile)) {
+        if (mod[0] !== '.' && request && fs.existsSync(moduleFile)) {
           // this is a deep lookup into the package,
           // resolve with that if the directory exists
           foundFile = moduleFile
