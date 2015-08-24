@@ -65,16 +65,20 @@ Fs.prototype = {
   //   - [module-folder]/[module-name]/path/index.js
   //   - [module-folder]/[module-name]/path.js
   module: function (file, relativeTo) {
-    var fileIndex;
-
     if (path.isAbsolute(file)) {
       return;
     }
 
     if (file[0] === '.') {
-      file = this.relative(file, relativeTo) + '.js';
-      fileIndex = path.join(file, 'index.js');
-      return fs.existsSync(fileIndex) ? fileIndex : file;
+      var fileIndex = this.relative(path.join(file, 'index.js'), relativeTo);
+      if (fs.existsSync(fileIndex)) {
+        return fileIndex;
+      }
+
+      var fileExact = file = this.relative(file + '.js', relativeTo);
+      if (fs.existsSync(fileExact)) {
+        return fileExact;
+      }
     }
 
     var currentDir = relativeTo ? path.dirname(relativeTo) : process.cwd();
