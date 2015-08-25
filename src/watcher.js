@@ -2,8 +2,6 @@
 
 var fs = require('fs');
 var gulpWatch = require('gulp-watch');
-var mergeStream = require('merge-stream');
-var watched = {};
 
 function Watcher ($events, $file, $tracer) {
   this._events = $events;
@@ -14,18 +12,6 @@ function Watcher ($events, $file, $tracer) {
 Watcher.prototype = {
   watch: function (bundle, callback) {
     var that = this;
-    var watcher = gulpWatch(bundle.files, function (file) {
-      file = file.path;
-      that._file(file).expire();
-
-      if (watched[file]) {
-        return;
-      }
-
-      watched[file] = {};
-      that._events.emit('watch', file);
-    });
-
     var subWatcher = gulpWatch(bundle.all, function (bundleFile) {
       bundleFile = bundleFile.path;
 
@@ -37,7 +23,7 @@ Watcher.prototype = {
       bundle.destinations(bundleFile).forEach(function (mainFile) {
         // If a bundle file was updated, then we don't need to force update
         // it. We just notify that it's been updated.
-        if (watched[bundleFile]) {
+        if (bundle.files.indexOf(bundleFile) > -1) {
           that._events.emit('update.main', bundleFile);
         } else {
           // Force update the main file
@@ -51,11 +37,11 @@ Watcher.prototype = {
       });
     });
 
-    watcher.on('error', function (error) {
+    subWatcher.on('error', function (error) {
       that._events.emit('error', error);
     });
 
-    watcher.on('close', function () {
+    subWatcher.on('close', function () {
       subWatcher.unwatch();
       subWatcher.close();
     });
@@ -64,7 +50,7 @@ Watcher.prototype = {
       that._events.emit('error', error);
     });
 
-    return mergeStream(watcher, subWatcher);
+    return subWatcher;
   }
 };
 
