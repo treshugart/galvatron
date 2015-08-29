@@ -79,7 +79,7 @@ gulp.task('dist', function () {
 
 ### Importing Less / CSS in your JS Files
 
-You can also import Less files from withing JavaScript files and Galvatron's tracer will insert the files you import into the stream. It will not, however, trace the Less files' `@import` declarations because Less transpilers will do this for you.
+You can also import Less files from within JavaScript files and Galvatron's tracer will insert the files you import into the stream. It will not, however, trace the Less files' `@import` declarations because Less transpilers will do this for you.
 
 You can use `gulp-filter` to insert this into the same stream as your JavaScript files:
 
