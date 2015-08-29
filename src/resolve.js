@@ -72,7 +72,14 @@ function findModule (file, relativeTo, lookups) {
       if (isModuleNameOnly && fs.existsSync(lookupFile)) {
         var json = require(lookupFile);
         if (json.main) {
-          return findRelative(json.main, lookupFile);
+          var withoutJs = findRelative(json.main, lookupFile);
+          var withJs = findRelative(json.main + '.js', lookupFile);
+          if (fs.existsSync(withoutJs)) {
+            return withoutJs;
+          }
+          if (fs.existsSync(withJs)) {
+            return withJs;
+          }
         }
       }
 
