@@ -56,7 +56,7 @@ module.exports = function (opts) {
   return through.obj(function (vinyl, enc, callback) {
     var that = this;
     traceRecursive(vinyl, opts).forEach(function (subVinyl) {
-      that.unshift(subVinyl);
+      that.push(subVinyl);
     });
     return callback();
   });
