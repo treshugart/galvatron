@@ -1,7 +1,6 @@
-var fs = require('fs');
 var regexToArray = require('../util/regex-to-array');
 
-module.exports = function (file) {
-  var code = fs.readFileSync(file);
+module.exports = function (vinyl) {
+  var code = vinyl.contents.toString();
   return code ? regexToArray(/^\s*@import\s*([^'"\s]*)\s*['"]([^'"]+)['"];?/gm, code) : [];
 };

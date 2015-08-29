@@ -1,7 +1,6 @@
 var detective = require('detective-cjs');
-var fs = require('fs');
 
-module.exports = function (file) {
-  var code = fs.readFileSync(file);
+module.exports = function (vinyl) {
+  var code = vinyl.contents.toString();
   return code ? detective(code) : [];
 };

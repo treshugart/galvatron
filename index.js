@@ -1,7 +1,6 @@
 'use strict';
 
-var trace = require('./src/trace');
-
 module.exports = {
-  trace: trace
+  globalize: require('./src/globalize'),
+  trace: require('./src/trace')
 };

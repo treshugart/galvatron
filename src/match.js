@@ -12,14 +12,14 @@ var matchers = {
   js: [matchAmd, matchCjs, matchEs6]
 };
 
-module.exports = function (file, opts) {
+module.exports = function (vinyl, opts) {
   opts = opts || {};
-  var ext = path.extname(file).replace('.', '');
+  var ext = path.extname(vinyl.path).replace('.', '');
   var use = opts.matchers || matchers[ext];
 
   if (use) {
     return use.reduce(function (arr, matcher) {
-      return arr.concat(matcher(file));
+      return arr.concat(matcher(vinyl));
     }, []);
   }
 

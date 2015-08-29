@@ -1,43 +1,51 @@
-var glob = require('./util/glob');
+var assign = require('lodash/object/assign');
 var match = require('./match');
 var resolve = require('./resolve');
+var through = require('through2');
+var Vinyl = require('vinyl');
 
-function traceRecursive (file, opts, parent, files, traced) {
-  opts = opts || {};
+function traceRecursive (vinyl, opts) {
+  opts = assign({
+    files: [],
+    traced: [],
+    vinyls: []
+  }, opts);
 
-  var filePath = resolve(file, opts);
-  var imports = match(filePath);
+  match(vinyl).forEach(function (imp) {
+    var impVinyl = new Vinyl({
+      path: resolve(imp, assign(opts, {
+        relativeTo: vinyl.path
+      }))
+    });
 
-  parent = parent || null;
-  files = files || [];
-  traced = traced || [];
-
-  imports.forEach(function (imp) {
-    var impPath = resolve(imp);
+    impVinyl.value = imp;
 
     // If there are circular references, this will cause recursion. We ignore
     // recursion since all we care about is a list of dependencies.
-    if (traced.indexOf(impPath) === -1) {
-      traced.push(impPath);
-      traceRecursive(impPath, opts, filePath, files, traced);
+    if (opts.traced.indexOf(impVinyl.path) === -1) {
+      opts.traced.push(impVinyl.path);
+      traceRecursive(impVinyl, assign(opts, {
+        files: opts.files,
+        traced: opts.traced,
+        vinyls: opts.vinyls
+      }));
     }
   });
 
-  if (files.indexOf(filePath) === -1) {
-    files.push(filePath);
+  if (opts.files.indexOf(vinyl.path) === -1) {
+    opts.files.push(vinyl.path);
+    opts.vinyls.push(vinyl);
   }
 
-  return files;
+  return opts.vinyls;
 }
 
-module.exports = function (path, opts) {
-  var traced = [];
-
-  glob(path).forEach(function (file) {
-    traceRecursive(file, opts).forEach(function (dependency) {
-      traced.push(dependency);
+module.exports = function (opts) {
+  return through.obj(function (vinyl, enc, callback) {
+    var that = this;
+    traceRecursive(vinyl, opts).forEach(function (subVinyl) {
+      that.unshift(subVinyl);
     });
+    return callback();
   });
-
-  return traced;
 };
