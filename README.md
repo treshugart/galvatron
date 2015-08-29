@@ -152,7 +152,7 @@ Galvatron's watcher does several things for you:
 
 ### Caching
 
-You'll notice that one of the things that the watcher does is clear a file's cache. This is so that you can cache the output of a plugin. For example, if we were watching that `dist` task with the `dist-watch` task and found that things were taking too long, al we'd have to do is cache the parts taking awhile.
+You'll notice that one of the things that the watcher does is clear a file's cache. This is so that you can cache the output of a plugin. For example, if we were watching that `dist` task with the `dist-watch` task and found that things were taking too long, all we'd have to do is cache the parts taking awhile.
 
 ```js
 var galv = require('galvatron');
