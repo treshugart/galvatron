@@ -1,4 +1,5 @@
 var assign = require('lodash/object/assign');
+var fs = require('fs');
 var match = require('./match');
 var resolve = require('./resolve');
 var through = require('through2');
@@ -12,10 +13,15 @@ function traceRecursive (vinyl, opts) {
   }, opts);
 
   match(vinyl).forEach(function (imp) {
+    var impPath = resolve(imp, assign(opts, { relativeTo: vinyl.path }));
+
+    if (!fs.existsSync(impPath)) {
+      throw new Error('cannot trace "' + vinyl.path + '" because "' + impPath + '" does not exist');
+    }
+
     var impVinyl = new Vinyl({
-      path: resolve(imp, assign(opts, {
-        relativeTo: vinyl.path
-      }))
+      contents: new Buffer(fs.readFileSync(impPath)),
+      path: impPath
     });
 
     impVinyl.value = imp;
