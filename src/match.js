@@ -2,13 +2,11 @@ var path = require('path');
 var matchAmd = require('./match/amd');
 var matchCjs = require('./match/cjs');
 var matchEs6 = require('./match/es6');
-var matchLess = require('./match/less');
 var matchers = {
   amd: [matchAmd],
   cjs: [matchCjs],
   es6: [matchEs6],
   es2015: [matchEs6],
-  less: [matchLess],
   js: [matchAmd, matchCjs, matchEs6]
 };
 
