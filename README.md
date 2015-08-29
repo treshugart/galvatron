@@ -16,7 +16,7 @@ require('galvatron');
 
 ## Usage
 
-Galvatron is written using a combination of Gulp and Vinyl streams. That said, you don't have to use it with Gulp, but anything that understands Streams 2 and Vinyl objects.
+Galvatron is written using a combination of Gulp and Vinyl streams. That said, you don't have to use it with Gulp. You can use it with anything that understands Streams 2 and Vinyl objects.
 
 ### Tracing Dependencies
 
