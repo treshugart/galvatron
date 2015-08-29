@@ -2,6 +2,7 @@ var crypto = require('crypto');
 var esprima = require('esprima');
 var estraverse = require('estraverse');
 var path = require('path');
+var through = require('through2');
 
 var prefix = '__';
 var regexUseStrict = /\n\s*['"]use strict['"];?/g;
@@ -86,7 +87,7 @@ function hasDefineCall (data) {
 }
 
 module.exports = function () {
-  return function (vinyl) {
+  return through.obj(function (vinyl, enc, callback) {
     var isAmd = hasDefineCall(data);
     var shims = [];
     var data = vinyl.contents.toString();
@@ -107,7 +108,7 @@ module.exports = function () {
 
     // We only need to generate the AMD -> CommonJS shim if it's used.
     if (isAmd) {
-      shims.push('var defineDependencies = ' + defineDependencies(info.imports) + ';');
+      shims.push('var defineDependencies = ' + defineDependencies(vinyl.imports) + ';');
       shims.push('var define = ' + defineReplacement + ';');
       shims.push('define.amd = true;');
     }
@@ -126,11 +127,15 @@ module.exports = function () {
     data = '(function () {\n' + data + '\n}).call(this);';
 
     // Assigns the module to a global variable.
-    data = generateModuleName(info.path) + ' = ' + data;
+    data = generateModuleName(vinyl.path) + ' = ' + data;
 
     // Comment will show relative path to the module file.
-    data = '// ' + makePathRelative(info.path) + '\n' + data;
+    data = '// ' + makePathRelative(vinyl.path) + '\n' + data;
 
-    return data;
-  };
+    // Reset the vinyl contents.
+    vinyl.contents = new Buffer(data);
+
+    this.push(vinyl);
+    return callback();
+  });
 };

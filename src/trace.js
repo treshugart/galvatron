@@ -12,6 +12,8 @@ function traceRecursive (vinyl, opts) {
     vinyls: []
   }, opts);
 
+  // Metadata.
+  vinyl.imports = [];
   match(vinyl).forEach(function (imp) {
     var impPath = resolve(imp, assign(opts, { relativeTo: vinyl.path }));
 
@@ -24,7 +26,11 @@ function traceRecursive (vinyl, opts) {
       path: impPath
     });
 
-    impVinyl.value = imp;
+    // Metadata.
+    vinyl.imports.push({
+      path: impPath,
+      value: imp
+    });
 
     // If there are circular references, this will cause recursion. We ignore
     // recursion since all we care about is a list of dependencies.
