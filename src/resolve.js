@@ -52,7 +52,7 @@ function findModule (file, relativeTo, lookups) {
       return fileIndex;
     }
 
-    var fileExact = file = findRelative(file + '.js', relativeTo);
+    var fileExact = findRelative(file + '.js', relativeTo);
     if (fs.existsSync(fileExact)) {
       return fileExact;
     }
@@ -66,7 +66,8 @@ function findModule (file, relativeTo, lookups) {
     for (var lookupPath in lookups) {
       var lookupBase = path.join(currentDir, new Array(a).join('../'));
       var lookupFile = path.join(lookupBase, lookupPath, file, lookups[lookupPath]);
-      var lookupModule = path.join(lookupBase, lookupPath, file + '.js');
+      var lookupModule = path.join(lookupBase, lookupPath, file);
+      var lookupModuleJs = path.join(lookupBase, lookupPath, file + '.js');
       var lookupModuleIndex = path.join(lookupBase, lookupPath, file, 'index.js');
 
       if (isModuleNameOnly && fs.existsSync(lookupFile)) {
@@ -85,6 +86,10 @@ function findModule (file, relativeTo, lookups) {
 
       if (fs.existsSync(lookupModuleIndex)) {
         return lookupModuleIndex;
+      }
+
+      if (fs.existsSync(lookupModuleJs)) {
+        return lookupModuleJs;
       }
 
       if (fs.existsSync(lookupModule)) {
