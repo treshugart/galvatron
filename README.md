@@ -42,14 +42,14 @@ define(['./c'], function (c) {
 `src/c.js`
 
 ```js
-var _ = require('lodash');
+var _ = require('underscore');
 module.exports = function () {};
 ```
 
 `node_modules/underscore/index.js`
 
 ```js
-// Unserscore source here.
+// Underscore source here.
 ```
 
 If you used `src/a.js` as your entry point, Galvatron would generate a dependency tree from this:
@@ -58,12 +58,12 @@ If you used `src/a.js` as your entry point, Galvatron would generate a dependenc
 - src/a.js
 -- src/b.js
 --- src/c.js
----- node_modules/lodash/index.js
+---- node_modules/underscore/index.js
 ```
 
 And insert them into the stream in the order in which they'd need to be included for concatenation:
 
-1. `node_modules/lodash/index.js`
+1. `node_modules/underscore/index.js`
 2. `src/c.js`
 3. `src/b.js`
 4. `src/a.js`
