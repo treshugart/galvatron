@@ -198,9 +198,15 @@ That would:
 3. Globalize.
 4. Concatenate to `dist/index.js`.
 
-### Importing Less / CSS in your JS Files
+### Importing Less / CSS
 
-You can also import Less files from within JavaScript files and Galvatron's tracer will insert the files you import into the stream. It will not, however, trace the Less files' `@import` declarations because Less transpilers will do this for you.
+You can also import CSS or Less files from within JavaScript files and Galvatron's tracer will insert the files you import into the stream. It will not, however, trace the Less files' `@import` declarations because Less transpilers will do this for you.
+
+`src/index.js`
+
+```js
+import './index.less';
+```
 
 You can use `gulp-filter` to insert this into the same stream as your JavaScript files:
 
@@ -241,6 +247,74 @@ That would:
 1. Trace.
 2. Transpile, globalize and concat JS to `dist/index.js`.
 3. Transpile and concat Less to `dist/index.css`.
+
+### Importing Other Assets
+
+Similar to importing styles, you can also import any file that exists in the file system. All Galvatron does, if it's not a JS file, is insert it into the stream. This allows you to be explicit about what resources a given module requires in order to function:
+
+```js
+import './img.png';
+```
+
+This is very useful for scripts that contain a template that may reference that image. Since your dependencies are declared in one spot, your build logic is simplified. For example, a simple custom element:
+
+`my-img.js`
+
+```js
+import './img.png';
+import './my-img.less';
+
+export default document.registerElement('my-img', {
+  prototype: Object.create(window.HTMLElement.prototype, {
+    createdCallback: {
+      value: function () {
+        this.innerHTML = '<img src="img.png">';
+      }
+    }
+  })
+});
+```
+
+Handling assets is handled in much the same way as everything else. The paths are just inserted into the stream and you can filter for them and then process them. For example, if you wanted to completely process the above component and put it in `dist`:
+
+```js
+var galv = require('galvatron');
+var gulp = require('gulp');
+var gulpBabel = require('gulp-babel');
+var gulpConcat = require('gulp-concat');
+var gulpFilter = require('gulp-filter');
+var gulpImagemin = require('gulp-concat');
+var gulpLess = require('gulp-less');
+
+gulp.task('dist', function () {
+  var filterImg = gulpFilter('my-img.png', { restore: true });
+  var filterLess = gulpFilter('my-img.less', { restore: true });
+  var filterJs = gulpFilter('my-img.js', { restore: true });
+  return gulp.src('my-img.js')
+    .pipe(galv.trace())
+
+    // JS.
+    .pipe(filterJs)
+    .pipe(gulpBabel())
+    .pipe(galv.globalize())
+    .pipe(gulpConcat('my-img.js'))
+    .pipe(filterJs.restore)
+
+    // Less.
+    .pipe(filterLess)
+    .pipe(gulpLess())
+    .pipe(gulpConcat('my-img.css'))
+    .pipe(filterLess.restore)
+
+    // Images.
+    .pipe(filterImg)
+    .pipe(gulpImagemin())
+    .pipe(filterImg.restore)
+
+    // Write.
+    .pipe(gulp.dest('dist'));
+});
+```
 
 ### Watching
 
