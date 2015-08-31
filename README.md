@@ -54,10 +54,12 @@ module.exports = function () {};
 
 If you used `src/a.js` as your entry point, Galvatron would generate a dependency tree from this:
 
+```
 - `src/a.js`
-  - `src/b.js`
-    - `src/c.js`
-      - `node_modules/lodash/index.js`
+-- `src/b.js`
+--- `src/c.js`
+---- `node_modules/lodash/index.js`
+```
 
 And insert them into the stream in the order in which they'd need to be included for concatenation:
 
