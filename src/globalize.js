@@ -1,9 +1,8 @@
-'use strict';
-
 var crypto = require('crypto');
 var esprima = require('esprima');
 var estraverse = require('estraverse');
 var path = require('path');
+var through = require('through2');
 
 var prefix = '__';
 var regexUseStrict = /\n\s*['"]use strict['"];?/g;
@@ -88,18 +87,25 @@ function hasDefineCall (data) {
 }
 
 module.exports = function () {
-  return function (data, info) {
+  return through.obj(function (vinyl, enc, callback) {
     var isAmd = hasDefineCall(data);
     var shims = [];
+    var data = vinyl.contents.toString();
 
     // Strict mode can cause problems with dependencies that you don't have
     // control over. Assume the worst.
     data = data.replace(regexUseStrict, '');
 
     // Replace all requires with references to dependency globals.
-    info.imports.forEach(function (imp) {
-      data = data.replace('require("' + imp.value + '")', generateModuleName(imp.path));
-      data = data.replace('require(\'' + imp.value + '\')', generateModuleName(imp.path));
+    vinyl.imports.forEach(function (imp) {
+      var replaceWith = '// import: ' + makePathRelative(imp.path);
+
+      if (path.extname(imp.path) === '.js') {
+        replaceWith = generateModuleName(imp.path);
+      }
+
+      data = data.replace('require("' + imp.value + '")', replaceWith);
+      data = data.replace('require(\'' + imp.value + '\')', replaceWith);
     });
 
     // We assume CommonJS because that's what we're using to convert it.
@@ -108,7 +114,7 @@ module.exports = function () {
 
     // We only need to generate the AMD -> CommonJS shim if it's used.
     if (isAmd) {
-      shims.push('var defineDependencies = ' + defineDependencies(info.imports) + ';');
+      shims.push('var defineDependencies = ' + defineDependencies(vinyl.imports) + ';');
       shims.push('var define = ' + defineReplacement + ';');
       shims.push('define.amd = true;');
     }
@@ -127,11 +133,15 @@ module.exports = function () {
     data = '(function () {\n' + data + '\n}).call(this);';
 
     // Assigns the module to a global variable.
-    data = generateModuleName(info.path) + ' = ' + data;
+    data = generateModuleName(vinyl.path) + ' = ' + data;
 
     // Comment will show relative path to the module file.
-    data = '// ' + makePathRelative(info.path) + '\n' + data;
+    data = '// ' + makePathRelative(vinyl.path) + '\n' + data;
 
-    return data;
-  };
+    // Reset the vinyl contents.
+    vinyl.contents = new Buffer(data);
+
+    this.push(vinyl);
+    return callback();
+  });
 };

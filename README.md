@@ -1,11 +1,6 @@
 # Galvatron
 
-Library for tracing, transforming and bundling any type of source file and its dependencies. It currently has built-in support for:
-
-1. ES6
-2. AMD
-3. CommonJS
-4. Less (experimental)
+A library of streaming helpers for tracing, watching and transforming JavaScript files.
 
 ## Installing
 
@@ -21,143 +16,393 @@ require('galvatron');
 
 ## Usage
 
-The most common usage for Galvatron is to take a single file and transform it into a concatenated JavaScript file that includes the content of that file and all of its dependencies.
+Galvatron is written using a combination of Gulp and Vinyl streams. That said, you don't have to use it with Gulp. You can use it with anything that understands Streams 2 and Vinyl objects.
+
+### Tracing Dependencies
+
+Galvatron will take any number of source files and trace their dependencies regardless of what module format they're using. This means you can use any combination of AMD, CommonJS or ES2015 modules within your project and Galvatron will figure out the dependency tree and insert each file into the stream.
+
+Take the following files, for example:
+
+`src/a.js`
 
 ```js
-var fs = require('fs');
-var galvatron = require('galvatron');
-
-fs.writeFile('dist/index.js', galvatron.bundle('src/index.js').compile());
+import './b';
+export default function () {};
 ```
 
-### Multiple File Transformation
-
-If you want to take multiple files and transform them into a single file you can do that too. It will still trace each file's dependencies in the proper order and will additionally make sure that none are duplicated. Both a path, glob pattern or an array of a mixture of either are supported.
+`src/b.js`
 
 ```js
-var compiled = galvatron.bundle([
-  'bower_components/jquery/jquery.js',
-  'src/*.js'
-]).compile();
-```
-
-### Dependency Resolution
-
-Dependency resolution follows the same rules as Node's `require()`. However, it not only applies them to `node_modules` folders but also to `bower_components` folders. This means you can do things like:
-
-```js
-// Will look in bower_components and node_modules *.json files for a "main"
-// entry or "jquery/index.js".
-import $ from 'jquery';
-
-// Will look in bower_components and node_modules for "jquery/src/jquery.js".
-import $ from 'jquery/src/jquery';
-
-// Will look for "./bower_components/jquery/src/jquery.js".
-import $ from './bower_components/jquery/src/jquery';
-
-// Will look for "./node_modules/jquery/src/jquery.js".
-import $ from './node_modules/jquery/src/jquery';
-```
-
-The same semantics are applied to any path you give to Galvatron. For example, you can add things to your bundle based on their module name:
-
-```js
-var underscoreAndDepenendies = galvatron.bundle('underscore').compile();
-```
-
-### Transforms
-
-Galvatron has a notion of both `pre` and `post` transforms. The `pre` transforms happen prior to tracing dependencies. This means that if you need to transform your code prior to tracing it for its dependencies, then you can do so. The `post` transforms happen after tracing and are intended to transform your source before it is concatenated.
-
-There are two built-in transformers:
-
-1. `babel`
-2. `globalize`
-
-Built-in transformers can be specified by their name:
-
-```js
-galvatron.transform.post('babel', options);
-```
-
-Or be used directly:
-
-```js
-var babel = require('galvatron/transform/babel');
-galvatron.transform.post(babel(options));
-```
-
-#### Babel
-
-The `babel` transformer will transpile your code from ES6 to ES5 using [Babel](https://babeljs.io/). Simply tell Galvatron to use it:
-
-```js
-galvatron.tranform.post('babel');
-```
-
-#### Globalize
-
-The `globalize` transform transforms your code from CommonJS into browser globals that won't conflict with any other globals. If they do, then you should probably reassess how you name your global variables. They're *hardly* global.
-
-The great part about this is that there's no need for a shim, so code bloat is kept to a minimum. Since there's no shim, you'll never have any module loader conflicts and globals will work even if you've split up your concatenated source into separate files and they reference each other's dependencies.
-
-This is especially useful when you're writing an open source library and you've got zero control over what your consumer is including with your library or framework. If you use Browserify you have to be careful because their shim will use whatever `require` is on the page if it's there before the shim. This means that it could potentially break the world. The solution according to an [open issue](https://github.com/substack/node-browserify/issues/790) is to change the AMD code. This doesn't help if you don't have control over other code on the page.
-
-#### Custom Transformers
-
-You can also write custom transformers. A transformer is simply a function that takes two arguments.
-
-```js
-galvatron.transformer.pre(function (code, data) {
-  return doSomeTransformationsTo(code);
+define(['./c'], function (c) {
+  return function () {};
 });
 ```
 
-The `code` argument is a string representing the current form of the code. It may have been altered by a previous transformer, or if this is the first transformation step, it may be the exact contents of the file.
-
-The `data` argument is an object containing information about the file. Depending on the type of transformer, this will contain different information.
-
-As a `pre` transformer:
-
-- `path` The file path.
-
-As a `post` transformer:
-
-- `path` The file path.
-- `imports` An array of objects containing the full `path` to, and exact `value` of, the import.
-
-### Streams
-
-Streams are super useful if you want to integrate your build into a stream system such as Gulp.
+`src/c.js`
 
 ```js
-var bundle = galvatron.bundle('src/*.js');
-gulp.src(bundle.files)
-  .pipe(bundle.stream())
-  .pipe(gulp.dest('dist'));
+var _ = require('underscore');
+module.exports = function () {};
 ```
 
-The `stream()` method returns a `vinyl` stream created by `vinylTransform`, so it can be used anywhere a `vinyl` stream can be used, not just with Gulp.
-
-You can create watch streams, too:
+`node_modules/underscore/index.js`
 
 ```js
-var bundle = galvatron.bundle('src/*.js');
-gulp.src(bundle.files)
-  .pipe(bundle.watch())
-  .pipe(bundle.stream())
-  .pipe(gulp.dest('dist'));
+// Underscore source here.
 ```
 
-And if you want to conditionally watch for changes, you can use the `watchIf(condition)` method instead of just `watch()` which may seem like a small amount of syntactic sugar, but it can really clean up your logic:
+If you used `src/a.js` as your entry point, Galvatron would generate a dependency tree from this:
+
+```
+- src/a.js
+-- src/b.js
+--- src/c.js
+---- node_modules/underscore/index.js
+```
+
+And insert them into the stream in the order in which they'd need to be included for concatenation:
+
+1. `node_modules/underscore/index.js`
+2. `src/c.js`
+3. `src/b.js`
+4. `src/a.js`
+
+The code to do this might look something like:
 
 ```js
+var galv = require('galvatron');
+var gulp = require('gulp');
 
-var bundle = galvatron.bundle('src/*.js');
-var shouldWatchForChanges = true;
-gulp.src(bundle.files)
-  .pipe(bundle.watchIf(shouldWatchForChanges))
-  .pipe(bundle.stream())
-  .pipe(gulp.dest('dist'));
+gulp.task('dist', function () {
+  return gulp.src('src/a.js')
+    .pipe(galv.trace())
+    .pipe(gulp.dest('dist'));
+});
 ```
+
+That would trace all modules referenced by `src/a.js` regardless of module format and move them to `dist`. Elaborating on this example, say we wanted to concatenate the files together. All you'd have to do is pipe something like [gulp-concat](https://www.npmjs.com/package/gulp-concat) into the stream:
+
+```js
+var galv = require('galvatron');
+var gulp = require('gulp');
+var gulpConcat = require('gulp-concat');
+
+gulp.task('dist', function () {
+  return gulp.src('src/a.js')
+    .pipe(galv.trace())
+    .pipe(gulpConcat('all.js'))
+    .pipe(gulp.dest('dist'));
+});
+```
+
+Doing so would create a single `dist/all.js` with all of your dependencies in their proper order.
+
+#### Path Resolution
+
+Galvatron supports the standard Node path resolution semantics of `require()`:
+
+1. [File Modules](https://nodejs.org/api/modules.html#modules_file_modules)
+2. [Loading from `node_modules` Folders](https://nodejs.org/api/modules.html#modules_loading_from_node_modules_folders)
+3. [Folders as Modules](https://nodejs.org/api/modules.html#modules_folders_as_modules)
+
+However, it also applies those same semantics to `bower_components` folders and their respective `bower.json` files.
+
+### AMD / CommonJS Shimming
+
+In the examples above, you saw how we can move modules and concatenate them together. However, you must BYO your own shim for the module format you're using. This isn't necessary if you use the `globalize` transform. With the `globalize` transform, any module format you're using will be automatically shimmed using unique, deterministic globals.
+
+Just pipe in `galv.globalize()`:
+
+```js
+var galv = require('galvatron');
+var gulp = require('gulp');
+var gulpConcat = require('gulp-concat');
+
+gulp.task('dist', function () {
+  return gulp.src('src/a.js')
+    .pipe(galv.trace())
+    .pipe(galv.globalize())
+    .pipe(gulpConcat('all.js'))
+    .pipe(gulp.dest('dist'));
+});
+```
+
+The benefit of using the `globalize` transform is that your code will work anywhere, no matter what module format you use, and no matter what module format your consumers / users are using.
+
+You can even decide that you don't want to concatenate your dependencies, or that you want to split up your batches. Since `globalize` creates deterministic global identifiers, if a module in `app.js` refers to a module in `common.js`, things will just work.
+
+For example, if you wanted to split up your common dependencies from your app code, you could use [gulp-filter](https://www.npmjs.com/package/gulp-filter):
+
+```js
+var galv = require('galvatron');
+var gulp = require('gulp');
+var gulpConcat = require('gulp-concat');
+var gulpFilter = require('gulp-filter');
+
+gulp.task('dist', function () {
+  var filterCommon = gulpFilter('node_modules/**', { restore: true });
+  var filterApp = gulpFilter('src/**', { restore: true });
+  return gulp.src('src/a.js')
+    .pipe(galv.trace())
+    .pipe(galv.globalize())
+
+    // Common dependencies.
+    .pipe(filterCommon)
+    .pipe(gulpConcat('common.js'))
+    .pipe(filterCommon.restore)
+
+    // App code.
+    .pipe(filterApp)
+    .pipe(gulpConcat('app.js'))
+    .pipe(filterApp.restore)
+
+    // Write.
+    .pipe(gulp.dest('dist'));
+});
+```
+
+That would:
+
+1. Trace.
+2. Globalize all files.
+3. Concatenate all depenencies in `node_modules` to `dist/common.js`.
+4. Concatenate all dependencies in `src` to `dist/app.js`.
+
+It would be up to whomever is consuming these batched files to load `dist/common.js` before `dist/app.js`, though.
+
+### ES6 / ES2015 Support
+
+Galvatron knows how to trace ES2015 files, but the Globalizer won't transform them for you. That's because there's more to it than just modules. In order to transpile ES2015 all you have to do is insert your transpiler of choice. For example, Babel:
+
+```js
+var galv = require('galvatron');
+var gulp = require('gulp');
+var gulpBabel = require('gulp-babel');
+var gulpConcat = require('gulp-concat');
+
+gulp.task('dist', function () {
+  return gulp.src('src/index.js')
+    .pipe(galv.trace())
+    .pipe(gulpBabel())
+    .pipe(galv.globalize())
+    .pipe(gulpConcat('index.js'))
+    .pipe(gulp.dest('dist'));
+});
+```
+
+That would:
+
+1. Trace `src/index.js`.
+2. Transpile from ES6 to ES5.
+3. Globalize.
+4. Concatenate to `dist/index.js`.
+
+### Importing Less / CSS
+
+You can also import CSS or Less files from within JavaScript files and Galvatron's tracer will insert the files you import into the stream. It will not, however, trace the Less files' `@import` declarations because Less transpilers will do this for you.
+
+`src/index.js`
+
+```js
+import './index.less';
+```
+
+You can use `gulp-filter` to insert this into the same stream as your JavaScript files:
+
+```js
+var galv = require('galvatron');
+var gulp = require('gulp');
+var gulpBabel = require('gulp-babel');
+var gulpConcat = require('gulp-concat');
+var gulpFilter = require('gulp-filter');
+var gulpLess = require('gulp-less');
+
+gulp.task('dist', function () {
+  var filterLess = gulpFilter('{**/*,*}.less', { restore: true });
+  var filterJs = gulpFilter('{**/*,*}.js', { restore: true });
+  return gulp.src('src/index.js')
+    .pipe(galv.trace())
+
+    // JS.
+    .pipe(filterJs)
+    .pipe(gulpBabel())
+    .pipe(galv.globalize())
+    .pipe(gulpConcat('index.js'))
+    .pipe(filterJs.restore)
+
+    // Less.
+    .pipe(filterLess)
+    .pipe(gulpLess())
+    .pipe(gulpConcat('index.css'))
+    .pipe(filterLess.restore)
+
+    // Write.
+    .pipe(gulp.dest('dist'));
+});
+```
+
+That would:
+
+1. Trace.
+2. Transpile, globalize and concat JS to `dist/index.js`.
+3. Transpile and concat Less to `dist/index.css`.
+
+### Importing Other Assets
+
+Similar to importing styles, you can also import any file that exists in the file system. All Galvatron does, if it's not a JS file, is insert it into the stream. This allows you to be explicit about what resources a given module requires in order to function:
+
+```js
+import './img.png';
+```
+
+This is very useful for scripts that contain a template that may reference that image. Since your dependencies are declared in one spot, your build logic is simplified. For example, a simple custom element:
+
+`my-img.js`
+
+```js
+import './img.png';
+import './my-img.less';
+
+export default document.registerElement('my-img', {
+  prototype: Object.create(window.HTMLElement.prototype, {
+    createdCallback: {
+      value: function () {
+        this.innerHTML = '<img src="img.png">';
+      }
+    }
+  })
+});
+```
+
+Handling assets is handled in much the same way as everything else. The paths are just inserted into the stream and you can filter for them and then process them. For example, if you wanted to completely process the above component and put it in `dist`:
+
+```js
+var galv = require('galvatron');
+var gulp = require('gulp');
+var gulpBabel = require('gulp-babel');
+var gulpConcat = require('gulp-concat');
+var gulpFilter = require('gulp-filter');
+var gulpImagemin = require('gulp-concat');
+var gulpLess = require('gulp-less');
+
+gulp.task('dist', function () {
+  var filterImg = gulpFilter('my-img.png', { restore: true });
+  var filterLess = gulpFilter('my-img.less', { restore: true });
+  var filterJs = gulpFilter('my-img.js', { restore: true });
+  return gulp.src('my-img.js')
+    .pipe(galv.trace())
+
+    // JS.
+    .pipe(filterJs)
+    .pipe(gulpBabel())
+    .pipe(galv.globalize())
+    .pipe(gulpConcat('my-img.js'))
+    .pipe(filterJs.restore)
+
+    // Less.
+    .pipe(filterLess)
+    .pipe(gulpLess())
+    .pipe(gulpConcat('my-img.css'))
+    .pipe(filterLess.restore)
+
+    // Images.
+    .pipe(filterImg)
+    .pipe(gulpImagemin())
+    .pipe(filterImg.restore)
+
+    // Write.
+    .pipe(gulp.dest('dist'));
+});
+```
+
+### Watching
+
+There is also `watch` helper that is just syntactic sugar around `gulp.watch()`.
+
+```js
+var galv = require('galvatron');
+var gulp = require('gulp');
+var gulpBabel = require('gulp-babel');
+var gulpConcat = require('gulp-concat');
+var gulpFilter = require('gulp-filter');
+var gulpLess = require('gulp-less');
+
+gulp.task('dist', function () {
+  var filterLess = gulpFilter('src/{**/*,*}.less', { restore: true });
+  var filterJs = gulpFilter('src/{**/*,*}.js', { restore: true });
+  return gulp.src('src/index.js')
+    .pipe(galv.trace())
+
+    // JS.
+    .pipe(filterJs)
+    .pipe(gulpBabel())
+    .pipe(galv.globalize())
+    .pipe(gulpConcat('index.js'))
+    .pipe(filterJs.restore)
+
+    // Less.
+    .pipe(filterLess)
+    .pipe(gulpLess())
+    .pipe(gulpConcat('index.css'))
+    .pipe(filterLess.restore)
+
+    // Write.
+    .pipe(gulp.dest('dist'));
+});
+
+gulp.task('dist-watch', function () {
+  galv.watch('src/**', ['dist']);
+});
+```
+
+Galvatron's watcher does several things for you:
+
+1. Ensures the task is run immediately.
+2. Watches files matching your pattern.
+3. Clears the cache for the files that have changed.
+4. Re-runs the task when any of the files change.
+
+### Caching
+
+Sometimes a build can take awhile. If you were watching the build in dev mode and you had to wait for a long running build to complete before you could test or view your changes, that would suck.
+
+One of the things that `watch()` does is automatically clear any cache that may have been added for a particular file. This is so that you can cache the output of a plugin. For example, if we were watching that `dist` task with the `dist-watch` task and found that things were taking too long, all you'd have to do is cache the parts taking awhile.
+
+```js
+var galv = require('galvatron');
+var gulp = require('gulp');
+var gulpBabel = require('gulp-babel');
+var gulpConcat = require('gulp-concat');
+var gulpFilter = require('gulp-filter');
+var gulpLess = require('gulp-less');
+
+gulp.task('dist', function () {
+  var filterLess = gulpFilter('src/{**/*,*}.less', { restore: true });
+  var filterJs = gulpFilter('src/{**/*,*}.js', { restore: true });
+  return gulp.src('src/index.js')
+    .pipe(galv.trace())
+
+    // JS.
+    .pipe(filterJs)
+    .pipe(galv.cache('babel', gulpBabel()))
+    .pipe(galv.cache('globalize', galv.globalize()))
+    .pipe(gulpConcat('index.js'))
+    .pipe(filterJs.restore)
+
+    // Less.
+    .pipe(filterLess)
+    .pipe(galv.cache('less', gulpLess()))
+    .pipe(gulpConcat('index.css'))
+    .pipe(filterLess.restore)
+
+    // Write.
+    .pipe(gulp.dest('dist'));
+});
+
+gulp.task('dist-watch', function () {
+  galv.watch('src/**', ['dist']);
+});
+```
+
+You can cache whatever you want, just ensure that your watch pattern is set to watch the files that you're caching.
