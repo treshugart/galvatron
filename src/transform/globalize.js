@@ -4,7 +4,7 @@ var crypto = require('crypto');
 var path = require('path');
 
 var prefix = '__';
-var regexAmd = /[^a-zA-Z0-9_$]define\s*\(/;
+var regexAmd = /[^a-zA-Z0-9_$]*define\s*\(/;
 var regexUseStrict = /\n\s*['"]use strict['"];?/g;
 
 function hash (str) {
@@ -47,6 +47,12 @@ function defineDependencies (imports) {
 function defineReplacement (name, deps, func) {
   var rval;
   var type;
+  var defineGlobal = (typeof window === 'undefined' ? global : window).define;
+
+  // Support existing AMD libs.
+  if (typeof defineGlobal === 'function') {
+    defineGlobal.apply(this, [].slice.call(arguments));
+  }
 
   func = [func, deps, name].filter(function (cur) { return typeof cur === 'function'; })[0];
   deps = [deps, name, []].filter(Array.isArray)[0];
@@ -114,6 +120,9 @@ module.exports = function () {
 
     // Assigns the module to a global variable.
     data = generateModuleName(info.path) + ' = ' + data;
+
+    // Ensure it's applied to a global object.
+    data = '(typeof window === \'undefined\' ? global : window).' + data;
 
     // Comment will show relative path to the module file.
     data = '// ' + makePathRelative(info.path) + '\n' + data;
