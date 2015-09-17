@@ -57,7 +57,7 @@ function defineReplacement (name, deps, func) {
 
   // Support existing AMD libs.
   if (typeof defineGlobal === 'function') {
-    // Almond always expects all three arguments, so resolve a name (#29).
+    // Almond always expects a name so resolve one (#29).
     if (typeof name === 'string') {
       defineGlobal(name, deps, func);
     } else {
