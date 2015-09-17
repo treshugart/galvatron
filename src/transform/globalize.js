@@ -47,17 +47,27 @@ function defineDependencies (imports) {
 function defineReplacement (name, deps, func) {
   var rval;
   var type;
-  var defineGlobal = (typeof window === 'undefined' ? global : window).define;
-
-  // Support existing AMD libs.
-  if (typeof defineGlobal === 'function') {
-    defineGlobal.apply(this, [].slice.call(arguments));
-  }
+  var root = (typeof window === 'undefined' ? global : window);
+  var defineGlobal = root.define;
 
   func = [func, deps, name].filter(function (cur) { return typeof cur === 'function'; })[0];
   deps = [deps, name, []].filter(Array.isArray)[0];
   rval = func.apply(null, deps.map(function (value) { return defineDependencies[value]; }));
   type = typeof rval;
+
+  // Support existing AMD libs.
+  if (typeof defineGlobal === 'function') {
+    // Almond always expects all three arguments, so resolve a name (#29).
+    if (typeof name === 'string') {
+      defineGlobal(name, deps, func);
+    } else {
+      if (typeof root.__galvatron_globalize_named_define_counter === 'undefined') {
+        root.__galvatron_globalize_named_define_counter = 0;
+      }
+      var generatedName = '__galvatron_globalize_' + ++root.__galvatron_globalize_named_define_counter;
+      defineGlobal(generatedName, deps, func);
+    }
+  }
 
   // Some processors like Babel don't check to make sure that the module value
   // is not a primitive before calling Object.defineProperty() on it. We ensure

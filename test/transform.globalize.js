@@ -77,29 +77,33 @@ mocha.describe('transform/globalize', function () {
 
       mocha.it('function', function () {
         run('define(function(){});');
-        expect(args.length).to.equal(1);
-        expect(args[0]).to.be.a('function');
+        expect(args.length).to.equal(3);
+        expect(args[0]).to.have.string('__galvatron_globalize_');
+        expect(args[1]).to.be.an('array');
+        expect(args[2]).to.be.a('function');
       });
 
       mocha.it('deps + function', function () {
         run('define([], function(){});');
-        expect(args.length).to.equal(2);
-        expect(args[0]).to.be.an('array');
-        expect(args[1]).to.be.a('function');
+        expect(args.length).to.equal(3);
+        expect(args[0]).to.have.string('__galvatron_globalize_');
+        expect(args[1]).to.be.an('array');
+        expect(args[2]).to.be.a('function');
       });
 
       mocha.it('name + function', function () {
         run('define("name", function(){});');
-        expect(args.length).to.equal(2);
-        expect(args[0]).to.be.a('string');
-        expect(args[1]).to.be.a('function');
+        expect(args.length).to.equal(3);
+        expect(args[0]).to.equal('name');
+        expect(args[1]).to.be.an('array');
+        expect(args[2]).to.be.a('function');
       });
 
       mocha.it('name + deps + function', function () {
-        run('define("name", [], function(){});');
+        run('define("name", ["foo"], function(){});');
         expect(args.length).to.equal(3);
-        expect(args[0]).to.be.a('string');
-        expect(args[1]).to.be.an('array');
+        expect(args[0]).to.equal('name');
+        expect(args[1]).to.deep.equal(['foo'], 'deps');
         expect(args[2]).to.be.a('function');
       });
     });
