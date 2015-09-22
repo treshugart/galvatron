@@ -44,54 +44,53 @@ function defineDependencies (imports) {
   return '{' + code + '}';
 }
 
-function defineReplacement (name, deps, func) {
-  var rval;
-  var type;
-  var root = (typeof window === 'undefined' ? global : window);
-  var defineGlobal = root.define;
+function defineReplacementWrapper(generatedModuleName) {
+  return function defineReplacement(name, deps, func) {
+    var rval;
+    var type;
+    var root = (typeof window === 'undefined' ? global : window);
+    var defineGlobal = root.define;
 
-  func = [func, deps, name].filter(function (cur) { return typeof cur === 'function'; })[0];
-  deps = [deps, name, []].filter(Array.isArray)[0];
-  rval = func.apply(null, deps.map(function (value) { return defineDependencies[value]; }));
-  type = typeof rval;
+    func = [func, deps, name].filter(function (cur) {
+      return typeof cur === 'function';
+    })[0];
+    deps = [deps, name, []].filter(Array.isArray)[0];
+    rval = func.apply(null, deps.map(function (value) {
+      return defineDependencies[value];
+    }));
+    type = typeof rval;
 
-  // Support existing AMD libs.
-  if (typeof defineGlobal === 'function') {
-    // Almond always expects a name so resolve one (#29).
-    if (typeof name === 'string') {
-      defineGlobal(name, deps, func);
-    } else {
-      if (typeof root.__galvatron_globalize_named_define_counter === 'undefined') {
-        root.__galvatron_globalize_named_define_counter = 0;
-      }
-      var generatedName = '__galvatron_globalize_' + ++root.__galvatron_globalize_named_define_counter;
-      defineGlobal(generatedName, deps, func);
+    // Support existing AMD libs.
+    if (typeof defineGlobal === 'function') {
+      // Almond always expects a name so resolve one (#29).
+      defineGlobal(typeof name === 'string' ? name : generatedModuleName, deps, func);
     }
-  }
 
-  // Some processors like Babel don't check to make sure that the module value
-  // is not a primitive before calling Object.defineProperty() on it. We ensure
-  // it is an instance so that it can.
-  if (type === 'string') {
-    rval = new String(rval);
-  } else if (type === 'number') {
-    rval = new Number(rval);
-  } else if (type === 'boolean') {
-    rval = new Boolean(rval);
-  }
+    // Some processors like Babel don't check to make sure that the module value
+    // is not a primitive before calling Object.defineProperty() on it. We ensure
+    // it is an instance so that it can.
+    if (type === 'string') {
+      rval = new String(rval);
+    } else if (type === 'number') {
+      rval = new Number(rval);
+    } else if (type === 'boolean') {
+      rval = new Boolean(rval);
+    }
 
-  // Reset the exports to the defined module. This is how we convert AMD to
-  // CommonJS and ensures both can either co-exist, or be used separately. We
-  // only set it if it is not defined because there is no object representation
-  // of undefined, thus calling Object.defineProperty() on it would fail.
-  if (rval !== undefined) {
-    exports = module.exports = rval;
-  }
+    // Reset the exports to the defined module. This is how we convert AMD to
+    // CommonJS and ensures both can either co-exist, or be used separately. We
+    // only set it if it is not defined because there is no object representation
+    // of undefined, thus calling Object.defineProperty() on it would fail.
+    if (rval !== undefined) {
+      exports = module.exports = rval;
+    }
+  };
 }
 
 module.exports = function () {
   return function (data, info) {
     var isAmd = data.match(regexAmd);
+    var generatedModuleName = generateModuleName(info.path);
     var shims = [];
 
     // Strict mode can cause problems with dependencies that you don't have
@@ -111,7 +110,7 @@ module.exports = function () {
     // We only need to generate the AMD -> CommonJS shim if it's used.
     if (isAmd) {
       shims.push('var defineDependencies = ' + defineDependencies(info.imports) + ';');
-      shims.push('var define = ' + defineReplacement + ';');
+      shims.push('var define = ' + defineReplacementWrapper + '("' + generatedModuleName + '");');
       shims.push('define.amd = true;');
     }
 
@@ -129,7 +128,7 @@ module.exports = function () {
     data = '(function () {\n' + data + '\n}).call(this);';
 
     // Assigns the module to a global variable.
-    data = generateModuleName(info.path) + ' = ' + data;
+    data = generatedModuleName + ' = ' + data;
 
     // Ensure it's applied to a global object.
     data = '(typeof window === \'undefined\' ? global : window).' + data;
