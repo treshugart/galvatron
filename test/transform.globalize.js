@@ -5,6 +5,8 @@ var mocha = require('mocha');
 var transform = require('../src/transform/globalize');
 
 mocha.describe('transform/globalize', function () {
+  var generatedModuleName = '__1dd241c4cd3fd1dd89c570cee98b79dd';
+
   function format () {
     return [].slice.call(arguments).join('\n');
   }
@@ -32,7 +34,7 @@ mocha.describe('transform/globalize', function () {
     });
     expect(result).to.equal(format(
       '// test.js',
-      '(typeof window === \'undefined\' ? global : window).__1dd241c4cd3fd1dd89c570cee98b79dd = (function () {',
+      '(typeof window === \'undefined\' ? global : window).' + generatedModuleName + ' = (function () {',
       '  var module = {',
       '    exports: {}',
       '  };',
@@ -53,7 +55,7 @@ mocha.describe('transform/globalize', function () {
     mocha.it('should supply a local AMD shim', function () {
       var data = format('define(function(){});');
       var code = globalize(data);
-      expect(code).to.contain('var define = function defineReplacement(');
+      expect(code).to.contain('var define = function defineReplacementWrapper(generatedModuleName) {\n    return function defineReplacement(');
     });
 
     mocha.describe('should work with an AMD loader already on the page', function () {
@@ -77,29 +79,33 @@ mocha.describe('transform/globalize', function () {
 
       mocha.it('function', function () {
         run('define(function(){});');
-        expect(args.length).to.equal(1);
-        expect(args[0]).to.be.a('function');
+        expect(args.length).to.equal(3);
+        expect(args[0]).to.equal(generatedModuleName);
+        expect(args[1]).to.be.an('array');
+        expect(args[2]).to.be.a('function');
       });
 
       mocha.it('deps + function', function () {
         run('define([], function(){});');
-        expect(args.length).to.equal(2);
-        expect(args[0]).to.be.an('array');
-        expect(args[1]).to.be.a('function');
+        expect(args.length).to.equal(3);
+        expect(args[0]).to.equal(generatedModuleName);
+        expect(args[1]).to.be.an('array');
+        expect(args[2]).to.be.a('function');
       });
 
       mocha.it('name + function', function () {
         run('define("name", function(){});');
-        expect(args.length).to.equal(2);
-        expect(args[0]).to.be.a('string');
-        expect(args[1]).to.be.a('function');
+        expect(args.length).to.equal(3);
+        expect(args[0]).to.equal('name');
+        expect(args[1]).to.be.an('array');
+        expect(args[2]).to.be.a('function');
       });
 
       mocha.it('name + deps + function', function () {
-        run('define("name", [], function(){});');
+        run('define("name", ["foo"], function(){});');
         expect(args.length).to.equal(3);
-        expect(args[0]).to.be.a('string');
-        expect(args[1]).to.be.an('array');
+        expect(args[0]).to.equal('name');
+        expect(args[1]).to.deep.equal(['foo'], 'deps');
         expect(args[2]).to.be.a('function');
       });
     });
