@@ -88,9 +88,9 @@ function hasDefineCall (data) {
 
 module.exports = function () {
   return through.obj(function (vinyl, enc, callback) {
-    var isAmd = hasDefineCall(data);
     var shims = [];
     var data = vinyl.contents.toString();
+    var isAmd = hasDefineCall(data);
 
     // Strict mode can cause problems with dependencies that you don't have
     // control over. Assume the worst.
