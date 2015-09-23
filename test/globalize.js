@@ -4,27 +4,38 @@ var expect = require('chai').expect;
 var mocha = require('mocha');
 var globalize = require('../src/globalize');
 var stream = require('stream');
+var util = require('util');
 
 mocha.describe('globalize', function () {
+  function Read(data) {
+    stream.Readable.call(this, {objectMode: true});
+    this._data = data;
+  }
+
+  util.inherits(Read, stream.Readable);
+
+  Read.prototype._read = function () {
+    this.push({
+      contents: {
+        toString: function () {
+          return this._data;
+        }.bind(this)
+      },
+      imports: [],
+      path: 'test.js'
+    });
+  };
+
+  function Write(func) {
+    stream.Writable.call(this, {objectMode: true});
+    this._write = func;
+  }
+
+  util.inherits(Write, stream.Writable);
+
   function file (data, func) {
-    var read = new stream.Readable({
-      objectMode: true,
-      read: function () {
-        this.push({
-          contents: {
-            toString: function () {
-              return data;
-            }
-          },
-          imports: [],
-          path: 'test.js'
-        });
-      }
-    });
-    var write = new stream.Writable({
-      objectMode: true,
-      write: func
-    });
+    var read = new Read(data);
+    var write = new Write(func);
     return read.pipe(globalize()).pipe(write);
   }
 
