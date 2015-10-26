@@ -1,11 +1,11 @@
 var crypto = require('crypto');
-var esprima = require('esprima');
-var estraverse = require('estraverse');
 var path = require('path');
 var through = require('through2');
+var Walker = require('node-source-walk');
 
 var prefix = '__';
 var regexUseStrict = /\n\s*['"]use strict['"];?/g;
+var walker = new Walker();
 
 function hash (str) {
   var cryp = crypto.createHash('md5');
@@ -44,6 +44,7 @@ function defineDependencies (imports) {
   return '{' + code + '}';
 }
 
+/* global window */
 function defineReplacementWrapper(generatedModuleName) {
   return function defineReplacement(name, deps, func) {
     var root = (typeof window === 'undefined' ? global : window);
@@ -89,12 +90,10 @@ function defineReplacementWrapper(generatedModuleName) {
 
 function hasDefineCall (data) {
   var hasDefine = false;
-  estraverse.traverse(esprima.parse(data), {
-    enter: function (node) {
-      if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'define') {
-        hasDefine = true;
-        this.break();
-      }
+  walker.walk(data, function (node) {
+    if (node.type === 'CallExpression' && node.callee.type === 'Identifier' && node.callee.name === 'define') {
+      hasDefine = true;
+      walker.stopWalking();
     }
   });
   return hasDefine;

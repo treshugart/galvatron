@@ -79,6 +79,13 @@ mocha.describe('globalize', function () {
     );
   });
 
+  mocha.it('should work with JSX', function (done) {
+    file(format('<jsx />'), function (vinyl) {
+      expect(vinyl.contents.toString()).to.contain('<jsx />');
+      done();
+    });
+  });
+
   mocha.describe('amd', function () {
     var defineReplacementCode = 'var define = function defineReplacementWrapper(generatedModuleName) {\n    return function defineReplacement(';
 
