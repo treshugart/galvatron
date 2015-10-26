@@ -4,12 +4,22 @@ var expect = require('chai').expect;
 var mocha = require('mocha');
 var match = require('../src/match/es6');
 
-mocha.describe('matcher/commonjs', function () {
+mocha.describe('matcher/es6', function () {
   mocha.it('should not error if code is empty', function () {
     match({
       contents: {
         toString: function () {
           return '';
+        }
+      }
+    });
+  });
+
+  mocha.it('should not error if containing JSX', function () {
+    match({
+      contents: {
+        toString: function () {
+          return '<jsx />';
         }
       }
     });

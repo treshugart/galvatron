@@ -25,6 +25,16 @@ mocha.describe('matcher/amd', function () {
     });
   });
 
+  mocha.it('should not error if containing JSX', function () {
+    match({
+      contents: {
+        toString: function () {
+          return '<jsx />';
+        }
+      }
+    });
+  });
+
   mocha.it('named define', function () {
     var deps = match({
       contents: {

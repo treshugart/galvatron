@@ -14,7 +14,7 @@ function traceRecursive (vinyl, opts) {
 
   // Metadata.
   vinyl.imports = [];
-  match(vinyl).forEach(function (imp) {
+  match(vinyl, opts).forEach(function (imp) {
     var impPath = resolve(imp, assign(opts, { relativeTo: vinyl.path }));
 
     if (!fs.existsSync(impPath)) {

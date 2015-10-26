@@ -35,7 +35,8 @@
     "chai": "^2.1.0",
     "eslint": "^1.3.0",
     "mocha": "^2.1.0",
-    "tmp": "0.0.25"
+    "tmp": "0.0.28",
+    "vinyl-fs": "^2.2.1"
   },
   "dependencies": {
     "crypto": "0.0.3",

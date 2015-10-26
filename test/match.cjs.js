@@ -25,6 +25,16 @@ mocha.describe('matcher/commonjs', function () {
     });
   });
 
+  mocha.it('should not error if containing JSX', function () {
+    match({
+      contents: {
+        toString: function () {
+          return '<jsx />';
+        }
+      }
+    });
+  });
+
   mocha.it('returns dependencies', function () {
     var deps = match({
       contents: {
