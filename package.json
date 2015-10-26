@@ -39,7 +39,7 @@
     "vinyl-fs": "^2.2.1"
   },
   "dependencies": {
-    "crypto": "0.0.3",
+    "crypto": "^0.0.3",
     "detective-amd": "^2.3.2",
     "detective-cjs": "^1.0.4",
     "detective-es6": "^1.1.0",
