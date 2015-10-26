@@ -406,3 +406,7 @@ gulp.task('dist-watch', function () {
 ```
 
 You can cache whatever you want, just ensure that your watch pattern is set to watch the files that you're caching.
+
+## JSX
+
+Galvatron supports JSX out of the box. You don't need to do anything to enable it.
