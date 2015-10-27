@@ -74,13 +74,11 @@ Fs.prototype = {
           } else if (fs.existsSync(packageFile)) {
             var pkg = require(packageFile);
 
-            if (pkg.main) {
-              // otherwise, return the module's main entry point.
-              var pkgMain = path.join(checkDir, pkg.main);
-              if (fs.existsSync(pkgMain)) {
-                foundFile = pkgMain;
-                break check;
-              }
+            // otherwise, return the module's main entry point.
+            var pkgMain = path.join(checkDir, pkg.main || 'index.js');
+            if (fs.existsSync(pkgMain)) {
+              foundFile = pkgMain;
+              break check;
             }
           }
         }
