@@ -3,7 +3,7 @@
   "engines": {
     "node": ">=0.12"
   },
-  "version": "0.7.6",
+  "version": "0.7.7",
   "description": "Library that applies pre and post transforms to CommonJS files, traces their dependencies and concatenates them.",
   "main": "index.js",
   "scripts": {
