@@ -1,63 +1,96 @@
-var assign = require('lodash/object/assign');
-var fs = require('fs');
-var match = require('./match');
-var resolve = require('./resolve');
+var globAll = require('glob-all');
+var gulpFilter = require('gulp-filter');
+var gulpTap = require('gulp-tap');
+var minimatch = require('minimatch');
 var through = require('through2');
-var Vinyl = require('vinyl');
+var trace = require('./trace/file');
+var vinylFs = require('vinyl-fs');
 
-function traceRecursive (vinyl, opts) {
-  opts = assign({
-    files: [],
-    traced: [],
-    vinyls: []
-  }, opts);
-
-  // Metadata.
-  vinyl.imports = [];
-  match(vinyl, opts).forEach(function (imp) {
-    var impPath = resolve(imp, assign(opts, { relativeTo: vinyl.path }));
-
-    if (!fs.existsSync(impPath)) {
-      throw new Error('cannot trace "' + vinyl.path + '" because "' + impPath + '" does not exist');
-    }
-
-    var impVinyl = new Vinyl({
-      contents: new Buffer(fs.readFileSync(impPath)),
-      path: impPath
-    });
-
-    // Metadata.
-    vinyl.imports.push({
-      path: impPath,
-      value: imp
-    });
-
-    // If there are circular references, this will cause recursion. We ignore
-    // recursion since all we care about is a list of dependencies.
-    if (opts.traced.indexOf(impVinyl.path) === -1) {
-      opts.traced.push(impVinyl.path);
-      traceRecursive(impVinyl, assign(opts, {
-        files: opts.files,
-        traced: opts.traced,
-        vinyls: opts.vinyls
-      }));
-    }
-  });
-
-  if (opts.files.indexOf(vinyl.path) === -1) {
-    opts.files.push(vinyl.path);
-    opts.vinyls.push(vinyl);
-  }
-
-  return opts.vinyls;
+function createVinylFs (traced) {
+  return function () {
+    return vinylFs.src(Object.keys(traced)).pipe(gulpTap(function (file) {
+      file.imports = traced[file.path].imports;
+      file.origin = traced[file.path].origin;
+    }));
+  };
 }
 
-module.exports = function (opts) {
-  return through.obj(function (vinyl, enc, callback) {
-    var that = this;
-    traceRecursive(vinyl, opts).forEach(function (subVinyl) {
-      that.push(subVinyl);
+function createFilter (traced) {
+  return function () {
+    var args = [].slice.call(arguments);
+    var f = gulpFilter(function (file) {
+      return args.some(function (opts) {
+        var pass = true;
+        var path = file.path;
+        var tracedFile = traced[path];
+
+        // We can't pass a file if we haven't traced it.
+        if (!tracedFile) {
+          return false;
+        }
+
+        if (pass && opts.common) {
+          pass = tracedFile.origin.length > 1;
+        }
+
+        if (pass && opts.origin) {
+          pass = tracedFile.origin.some(function (orig) {
+            return minimatch(orig, opts.origin);
+          });
+        }
+
+        if (pass && opts.unique) {
+          pass = tracedFile.origin.length === 1;
+        }
+
+        return pass;
+      });
+    }, {
+      restore: true
     });
-    return callback();
+    this._filters = (this.filters || []).concat(f);
+    return f;
+  };
+}
+
+function restore () {
+  if (!this._filters || !this._filters.length) {
+    throw new Error('Cannot restore the last filter because no filters exist.');
+  }
+  return this._filters.pop().restore;
+}
+
+module.exports = function (src, opts) {
+  // The original files passed in, if specified.
+  var origin = globAll.sync(src);
+
+  // Pre-trace all files so we know what we're dealing with. If no path was
+  // specified, then this is empty.
+  var traced = origin.reduce(function (map, orig) {
+    return trace(orig, opts).reduce(function (map, dep) {
+      if (map[dep.path]) {
+        map[dep.path].origin.push(orig);
+      } else {
+        dep.origin = [orig];
+        map[dep.path] = dep;
+      }
+      return map;
+    }, map);
+  }, {});
+
+  // The stream that inserts the traced files into the stream.
+  var stream = through.obj(function (file, type, func) {
+    var that = this;
+    Object.keys(traced).forEach(function (file) {
+      that.push(traced[file]);
+    });
+    return func();
   });
+
+  stream.createStream = createVinylFs(traced);
+  stream.filter = createFilter(traced);
+  stream.restore = restore;
+  stream.src = src;
+
+  return stream;
 };
