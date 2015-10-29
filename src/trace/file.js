@@ -11,25 +11,27 @@ function trace (vinyl, opts) {
     traced: []
   }, opts);
 
-  var traceCache = cache.data('trace');
-  opts.traced.push(vinyl.path);
+  var importCache = cache.data('imports');
+  var matchCache = cache.data('matches');
+  var matches = matchCache[vinyl.path] || (matchCache[vinyl.path] = match(vinyl, opts));
 
-  vinyl.imports = vinyl.imports || match(vinyl, opts).map(function (imp) {
+  opts.traced.push(vinyl.path);
+  vinyl.imports = matches.map(function (imp) {
     var impPath = resolve(imp, assign(opts, { relativeTo: vinyl.path }));
 
-    if (traceCache[impPath]) {
-      return traceCache[impPath];
+    if (importCache[impPath]) {
+      return importCache[impPath];
     }
 
     if (!fs.existsSync(impPath)) {
       throw new Error('cannot trace "' + vinyl.path + '" because "' + impPath + '" does not exist');
     }
 
-    return traceCache[impPath] = new Vinyl({
+    return importCache[impPath] = {
       contents: new Buffer(fs.readFileSync(impPath)),
       path: impPath,
       value: imp
-    });
+    };
   });
 
   return vinyl.imports.reduce(function (dep, imp) {
