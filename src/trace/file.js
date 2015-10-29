@@ -1,4 +1,5 @@
 var assign = require('lodash/object/assign');
+var cache = require('../cache');
 var fs = require('fs');
 var match = require('../match');
 var path = require('path');
@@ -7,49 +8,39 @@ var Vinyl = require('vinyl');
 
 function trace (vinyl, opts) {
   opts = assign({
-    files: [],
-    traced: [],
-    vinyls: []
+    traced: []
   }, opts);
 
-  // Metadata.
-  vinyl.imports = [];
-  match(vinyl, opts).forEach(function (imp) {
+  var traceCache = cache.data('trace');
+  opts.traced.push(vinyl.path);
+
+  vinyl.imports = vinyl.imports || match(vinyl, opts).map(function (imp) {
     var impPath = resolve(imp, assign(opts, { relativeTo: vinyl.path }));
+
+    if (traceCache[impPath]) {
+      return traceCache[impPath];
+    }
 
     if (!fs.existsSync(impPath)) {
       throw new Error('cannot trace "' + vinyl.path + '" because "' + impPath + '" does not exist');
     }
 
-    var impVinyl = new Vinyl({
+    return traceCache[impPath] = new Vinyl({
       contents: new Buffer(fs.readFileSync(impPath)),
-      path: impPath
-    });
-
-    // Metadata.
-    vinyl.imports.push({
       path: impPath,
       value: imp
     });
-
-    // If there are circular references, this will cause recursion. We ignore
-    // recursion since all we care about is a list of dependencies.
-    if (opts.traced.indexOf(impVinyl.path) === -1) {
-      opts.traced.push(impVinyl.path);
-      trace(impVinyl, assign(opts, {
-        files: opts.files,
-        traced: opts.traced,
-        vinyls: opts.vinyls
-      }));
-    }
   });
 
-  if (opts.files.indexOf(vinyl.path) === -1) {
-    opts.files.push(vinyl.path);
-    opts.vinyls.push(vinyl);
-  }
-
-  return opts.vinyls;
+  return vinyl.imports.reduce(function (dep, imp) {
+    // If there are circular references, this will cause recursion. We ignore
+    // recursion since all we care about is a list of dependencies.
+    if (opts.traced.indexOf(imp.path) === -1) {
+      opts.traced.push(imp.path);
+      dep = dep.concat(trace(imp, opts));
+    }
+    return dep;
+  }, []).concat(vinyl);
 }
 
 module.exports = function (file, opts) {

@@ -1,34 +1,46 @@
 var minimatch = require('minimatch');
-var tap = require('gulp-tap');
 var ternary = require('ternary-stream');
 var through = require('through2');
-var _cache = {};
+
+var internalCache = {};
 
 function cache (key, plugin) {
-  if (!_cache[key]) {
-    _cache[key] = {};
-  }
+  var val = cache.data(key);
 
-  plugin.on('data', function (file) {
-    _cache[key][file.path] = file.contents;
+  plugin.on('data', function (file) {;
+    val[file.path] = file.contents;
   });
 
   return ternary(function (file) {
-    return _cache[key][file.path];
+    return val[file.path];
   }, through.obj(function (file, type, done) {
-    file.contents = _cache[key][file.path];
+    file.contents = val[file.path];
     done(null, file);
   }), plugin);
 }
 
+cache.data = function (key) {
+  return internalCache[key] || (internalCache[key] = {});
+};
+
 cache.expire = function (pattern) {
-  Object.keys(_cache).forEach(function (key) {
-    Object.keys(_cache[key]).forEach(function (path) {
+  // Also accept an object with a pather property. This supports:
+  // - a vinyl file
+  // - a gaze event
+  // - anything that has the "path" property set
+  if (typeof pattern === 'object') {
+    pattern = pattern.path;
+  }
+
+  Object.keys(internalCache).forEach(function (key) {
+    var item = internalCache[key];
+    Object.keys(item).forEach(function (path) {
       if (minimatch(path, pattern)) {
-        delete _cache[key][path];
+        delete item[path];
       }
     });
   });
+
   return this;
 };
 
