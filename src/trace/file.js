@@ -20,7 +20,7 @@ function trace (vinyl, opts) {
     var impPath = resolve(imp, assign(opts, { relativeTo: vinyl.path }));
 
     if (importCache[impPath]) {
-      return importCache[impPath];
+      //return importCache[impPath];
     }
 
     if (!fs.existsSync(impPath)) {
