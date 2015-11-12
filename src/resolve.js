@@ -2,11 +2,7 @@ var path = require('path');
 var fs = require('fs');
 
 function findMap (file, map) {
-  map = map || [];
-
-  if (!map.length) {
-    return file;
-  }
+  map = map || {};
 
   if (map[file]) {
     // return early for an exact match

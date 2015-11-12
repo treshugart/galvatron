@@ -8,7 +8,19 @@ var vinylFs = require('vinyl-fs');
 
 function createVinylFs (traced) {
   return function () {
-    return vinylFs.src(Object.keys(traced)).pipe(gulpTap(function (file) {
+    return vinylFs.src(
+      Object.keys(traced),
+
+      // We must force the base path because the vinyl-fs docs say that
+      // anything that's not a glob will have the base path set as the current
+      // working directory. However, this is not correct. The base is actually
+      // set to the file's dirname instead.
+      //
+      // For more information: https://github.com/gulpjs/vinyl-fs/issues/129
+      //
+      // In order to get around this we force the base path to be the cwd.
+      { base: process.cwd() }
+    ).pipe(gulpTap(function (file) {
       file.imports = traced[file.path].imports;
       file.origin = traced[file.path].origin;
     }));
@@ -91,6 +103,7 @@ module.exports = function (src, opts) {
   stream.filter = createFilter(traced);
   stream.restore = restore;
   stream.src = src;
+  stream.traced = traced;
 
   return stream;
 };
