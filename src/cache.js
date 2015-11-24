@@ -1,4 +1,4 @@
-var multimatch = require('multimatch');
+var minimatch = require('minimatch');
 var path = require('path');
 var ternary = require('ternary-stream');
 var through = require('through2');
@@ -33,10 +33,14 @@ cache.expire = function (file) {
     file = file.path;
   }
 
+  // Ensure the full path is given.
+  file = path.resolve(file);
+
   Object.keys(internalCache).forEach(function (key) {
     var item = internalCache[key];
     Object.keys(item).forEach(function (path) {
-      if (multimatch(path, file)) {
+      if (minimatch(path, file)) {
+        console.log('uncached', file);
         delete item[path];
       }
     });
