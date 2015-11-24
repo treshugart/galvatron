@@ -6,6 +6,10 @@ var path = require('path');
 var resolve = require('../resolve');
 var Vinyl = require('vinyl');
 
+function isValidImport (imp) {
+  return imp.indexOf('\'') === -1 && imp.indexOf('"') === -1;
+}
+
 function trace (vinyl, opts) {
   opts = assign({
     traced: []
@@ -16,7 +20,7 @@ function trace (vinyl, opts) {
   var matches = matchCache[vinyl.path] || (matchCache[vinyl.path] = match(vinyl, opts));
 
   opts.traced.push(vinyl.path);
-  vinyl.imports = matches.map(function (imp) {
+  vinyl.imports = matches.filter(isValidImport).map(function (imp) {
     var impPath = resolve(imp, assign(opts, { relativeTo: vinyl.path }));
 
     if (importCache[impPath]) {

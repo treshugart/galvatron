@@ -1,4 +1,5 @@
-var minimatch = require('minimatch');
+var multimatch = require('multimatch');
+var path = require('path');
 var ternary = require('ternary-stream');
 var through = require('through2');
 
@@ -23,19 +24,19 @@ cache.data = function (key) {
   return internalCache[key] || (internalCache[key] = {});
 };
 
-cache.expire = function (pattern) {
-  // Also accept an object with a pather property. This supports:
+cache.expire = function (file) {
+  // Also accept an object with a path property. This supports:
   // - a vinyl file
   // - a gaze event
   // - anything that has the "path" property set
-  if (typeof pattern === 'object') {
-    pattern = pattern.path;
+  if (typeof file === 'object') {
+    file = file.path;
   }
 
   Object.keys(internalCache).forEach(function (key) {
     var item = internalCache[key];
     Object.keys(item).forEach(function (path) {
-      if (minimatch(path, pattern)) {
+      if (multimatch(path, file)) {
         delete item[path];
       }
     });

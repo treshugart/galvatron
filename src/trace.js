@@ -1,7 +1,7 @@
 var globAll = require('glob-all');
 var gulpFilter = require('gulp-filter');
 var gulpTap = require('gulp-tap');
-var minimatch = require('minimatch');
+var multimatch = require('multimatch');
 var through = require('through2');
 var trace = require('./trace/file');
 var vinylFs = require('vinyl-fs');
@@ -47,7 +47,7 @@ function createFilter (traced) {
 
         if (pass && opts.origin) {
           pass = tracedFile.origin.some(function (orig) {
-            return minimatch(orig, opts.origin);
+            return multimatch(orig, opts.origin);
           });
         }
 

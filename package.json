@@ -52,6 +52,7 @@
     "gulp-watch": "^4.1.1",
     "lodash": "^3.10.1",
     "minimatch": "^3.0.0",
+    "multimatch": "^2.1.0",
     "node-source-walk": "^2.1.0",
     "ternary-stream": "^2.0.0",
     "through2": "^2.0.0",
