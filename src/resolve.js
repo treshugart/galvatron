@@ -11,10 +11,9 @@ function findMap (file, map) {
 
   for (var alias in map) {
     if (map.hasOwnProperty(alias)) {
-      var parts = file.split(path.sep);
-      var start = parts.shift();
-      if (start === alias) {
-        return path.resolve(map[alias]);
+      var mapAlias = map[alias];
+      if (mapAlias === alias) {
+        return path.resolve(mapAlias);
       }
     }
   }
