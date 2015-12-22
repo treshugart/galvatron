@@ -11,10 +11,10 @@ function findMap (file, map) {
 
   for (var alias in map) {
     if (map.hasOwnProperty(alias)) {
-      if (file.indexOf(alias) === 0) {
-        // The file path begins with the alias, exchange that for the expanded
-        // path.
-        return path.resolve(file.replace(alias, map[alias]));
+      var parts = file.split(path.sep);
+      var start = parts.shift();
+      if (start === alias) {
+        return path.resolve(map[alias]);
       }
     }
   }
