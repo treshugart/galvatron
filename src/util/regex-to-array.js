@@ -4,7 +4,7 @@ module.exports = function regexToArray (regex, str) {
   var match;
   var matches = [];
 
-  while (match = regex.exec(str)) {
+  while ((match = regex.exec(str))) {
     matches.push(match);
   }
 
