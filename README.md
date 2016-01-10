@@ -1,4 +1,4 @@
-# Galvatron
+# [![Build Status](https://travis-ci.org/treshugart/galvatron.svg?branch=master)](https://travis-ci.org/treshugart/galvatron) Galvatron
 
 A library of streaming helpers for tracing, watching and transforming JavaScript files.
 
