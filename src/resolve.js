@@ -37,8 +37,8 @@ function findModule (file, relativeTo, lookups) {
   }
 
   lookups = lookups || {
-    bower_components: 'bower.json',
-    node_modules: 'package.json'
+    node_modules: 'package.json',
+    bower_components: 'bower.json'
   };
 
   if (file[0] === '.') {
