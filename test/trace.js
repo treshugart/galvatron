@@ -1,5 +1,6 @@
 'use strict';
 
+var expect = require('chai').expect;
 var fs = require('fs');
 var mocha = require('mocha');
 var trace = require('../src/trace');
@@ -21,5 +22,11 @@ mocha.describe('trace', function () {
     var stream = createReadStream('<jsx />');
     stream.on('end', done);
     stream.pipe(createWriteStream());
+  });
+
+  mocha.it('should error if dependency is a directory', function () {
+    expect(function() {
+      createReadStream('import "' + tmp.dirSync().name + '";');
+    }).to.throw(/is a directory/);
   });
 });

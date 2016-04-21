@@ -31,6 +31,11 @@ function trace (vinyl, opts) {
       throw new Error('cannot trace "' + vinyl.path + '" because "' + impPath + '" does not exist');
     }
 
+    var stat = fs.statSync(impPath);
+    if (stat.isDirectory()) {
+      throw new Error('cannot trace "' + vinyl.path + '" because "' + impPath + '" is a directory');
+    }
+
     return importCache[impPath] = {
       contents: new Buffer(fs.readFileSync(impPath)),
       path: impPath,
