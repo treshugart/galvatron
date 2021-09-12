@@ -1,4 +1,4 @@
-var assign = require('lodash/object/assign');
+var assign = require('lodash.assign');
 var cache = require('../cache');
 var fs = require('fs');
 var match = require('../match');
